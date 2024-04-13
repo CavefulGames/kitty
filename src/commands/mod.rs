@@ -1,6 +1,8 @@
 mod install;
+mod kit;
 
 pub use install::InstallSubcommand;
+pub use kit::KitSubcommand;
 
 use structopt::StructOpt;
 
@@ -15,6 +17,7 @@ impl Args {
     pub fn run(self) -> anyhow::Result<()> {
         match self.subcommand {
             Subcommand::Install(subcommand) => subcommand.run(),
+			Subcommand::Kit(subcommand) => subcommand.run(),
         }
     }
 }
@@ -22,4 +25,5 @@ impl Args {
 #[derive(Debug, StructOpt)]
 pub enum Subcommand {
     Install(InstallSubcommand),
+	Kit(KitSubcommand),
 }
