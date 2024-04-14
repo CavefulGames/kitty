@@ -1,0 +1,51 @@
+{
+	"name": "kitty-dev",
+	"tree":	{
+		"$className": "DataModel",
+		"ServerScriptService": {
+			"$className": "ServerScriptService",
+			"Packages": {
+				"$path": "Packages",
+				"animator": {
+					"$path": "kit/animator"
+				},
+				"asset": {
+					"$path": "kit/asset"
+				},
+				"capsule": {
+					"$path": "kit/capsule"
+				},
+				"config": {
+					"$path": "kit/config"
+				},
+				"context": {
+					"$path": "kit/context"
+				},
+				"dashboard": {
+					"$path": "kit/dashboard"
+				},
+				"entity": {
+					"$path": "kit/entity"
+				},
+				"hook": {
+					"$path": "kit/hook"
+				},
+				"input": {
+					"$path": "kit/input"
+				},
+				"net": {
+					"$path": "kit/net"
+				},
+				"physics": {
+					"$path": "kit/physics"
+				},
+				"util": {
+					"$path": "kit/util"
+				},
+				"view": {
+					"$path": "kit/view"
+				}
+			}
+		}
+	}
+}

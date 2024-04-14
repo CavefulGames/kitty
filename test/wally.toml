@@ -1,0 +1,8 @@
+[package]
+name = "dongd5ng/test"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
+context = "jiwonz/context@0.0.1"
