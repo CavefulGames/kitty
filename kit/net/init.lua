@@ -1,10 +1,11 @@
-local core = script.Parent.Parent
-local MessagePack = require(core.libs.msgpack)
-local TableUtil = require(core.libs.tableutil)
-local Promise = require(core.wally.promise)
-local Warp = require(core.wally.warp)
-local MMH3 = require(core.libs.mmh3)
-local OnInit = require(core.events.Init)
+--// TODO: do event handling with Warp's signal
+
+--// dependencies
+local MsgPack = require(script.Parent["msgpack-luau"])
+local Promise = require(script.Parent.promise)
+local Warp = require(script.Parent.warp)
+
+--// services
 local ReplicatedStorage = game:GetService"ReplicatedStorage"
 local Net = {}
 
@@ -25,11 +26,6 @@ local numberBooleanMap = {
 	[0] = false,
 	[1] = true
 }
-
-local Hook
-OnInit:Connect(function(dependencies)
-	Hook = dependencies.Hook
-end)
 
 local function initializeBuffer()
 	outgoingBufferSize = 64
@@ -94,7 +90,7 @@ if isServer then
 		resetBuffer()
 	end
 
-	function Net.getReceiveHook(messageName:string)
+	function Net.getReceiveSignal(messageName:string)
 		local event = events[messageName]
 		if not event then
 

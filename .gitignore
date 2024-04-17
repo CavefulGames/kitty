@@ -1,3 +1,5 @@
 /target
 /Packages
+/test
 sourcemap.json
+**/*.lock

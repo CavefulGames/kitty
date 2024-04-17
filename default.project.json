@@ -24,6 +24,9 @@
 				"dashboard": {
 					"$path": "kit/dashboard"
 				},
+				"debug": {
+					"$path": "kit/debug"
+				},
 				"entity": {
 					"$path": "kit/entity"
 				},
@@ -44,6 +47,9 @@
 				},
 				"view": {
 					"$path": "kit/view"
+				},
+				"when": {
+					"$path": "kit/when"
 				}
 			}
 		}

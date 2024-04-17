@@ -1,170 +1,116 @@
---// dependencies
-local Promise = require(script.Parent.promise)
-local TaskQueue = require(script.Parent.taskqueue)
-local Signal = require(script.Parent.signal)
+local Capsule = require(script.Parent.capsule)
+local Context = {}
 
---// services
-local RunService = game:GetService"RunService"
+local sleeping = {}
+local freeThreads: { thread } = {}
+local synchronized = false
 
-local module = {}
-local events = {}
-local connections = {}
-local sleepingThreads = {}
-local debugTicks = {}
-local runServiceConnections = {}
-local when = {
-	beforeRender = RunService.PreRender;
-	afterSimulation = RunService.PostSimulation;
-	beforeSimulation = RunService.PreSimulation;
-	afterRender = RunService.PreAnimation;
-}
-
---// dependencies
-local Console
-function module.init(deps)
-	Console = deps.Console
+local function checkYieldSafe()
+	if synchronized then
+		error("Not allowed to yield or wait while the current context is synchronized")
+	end
 end
 
-function module.getLocalTime()
-	return tick()
+local function runCallback(callback, thread, ...)
+	callback(...)
+	table.insert(freeThreads, thread)
 end
 
-function module.getGameTime()
-	return time()
+local function yielder()
+	while true do
+		runCallback(coroutine.yield())
+	end
 end
 
-function module.getLuaTime()
-	return os.clock()
+local AsyncMetatable = {}
+AsyncMetatable.__index = AsyncMetatable
+
+function AsyncMetatable:await(...)
+	return self._fn(...)
 end
 
-function module.getUTCTime()
-	return os.time()
-end
-
-local function getEvent(eventName,identifier)
-	local event = events[eventName]
-	Console.fatalfAssert(event~=nil,"event %s is not exist or not created yet, please call 'Thread.createEvent(\"%s\")' before connect",eventName,eventName)
-	return event
-end
-
-local function getHandles(eventName,identifier)
-	local handles = connections[eventName]
-	if handles then
-		if handles[identifier] then
-			Console.fatalf("Thread event '%s' is already in use in the same identifier '%s' please unbind before connect another",eventName,tostring(identifier))
+function AsyncMetatable:__call(...)
+	local fn = self._fn
+	if fn then
+		local thread
+		if #freeThreads > 0 then
+			thread = freeThreads[#freeThreads]
+			freeThreads[#freeThreads] = nil
+		else
+			thread = coroutine.create(yielder)
+			coroutine.resume(thread)
 		end
-	else
-		handles = {}
-		connections[eventName] = handles
-	end
-	return handles
-end
-
-function module.fireEvent(eventName:string)
-	events[eventName]:Fire()
-end
-
-function module.createEvent(eventName:string)
-	events[eventName] = Signal.new()
-end
-
-function module.removeEvent(eventName:string)
-	events[eventName]:Destroy()
-	events[eventName] = nil
-end
-
-function module.on(eventName:string,callback:()->(),identifier:any?)
-	identifier = identifier or masterkey
-	local event = getEvent(eventName)
-	if not callback then
-		return event
-	end
-	local handles = getHandles(eventName,identifier)
-	handles[identifier] = event:Connect(callback)
-end
-
-function module.deactivate()
-
-end
-
-function module.activate()
-
-end
-
-function module.once(eventName:string,callback:()->())
-	return getEvent(eventName):Once(callback)
-end
-
-function module.waitFor(eventName:string,callback:()->())
-	return getEvent(eventName):Wait()
-end
-
-function module.unbind(eventName:string,identifier:any?)
-	local callbacks = events[eventName]
-	if callbacks then
-		identifier = identifier or masterkey
-		connections[identifier]:Disconnect()
-		connections[identifier] = nil
+		task.spawn(thread,fn,thread,...)
 	end
 end
 
-function module.wakeUp(sleepId:any)
-	sleepingThreads[sleepId] = nil
+function Context.Async(f:(...any)->(any))
+	return setmetatable({_fn = f},AsyncMetatable)
 end
 
-function module.sleep(duration:number,sleepId:any)
-	sleepingThreads[sleepId] = true
-	local t = tick()
-	while sleepingThreads[sleepId] and tick() - t < duration do
-		taskWait()
+function Context.Sync(f:(...any)->(any)) --// to force synchronization and run the function, wrap it with the Sync
+	return function(...)
+		synchronized = true
+		f(...)
+		synchronized = false
 	end
-	local success = sleepingThreads[sleepId] ~= nil
+end
+
+function Context.isAsync(obj:any)
+end
+
+-- function Context.getGameTime()
+-- 	return time()
+-- end
+
+-- function Context.getLuaTime()
+-- 	return os.clock()
+-- end
+
+-- function Context.getUTCTime()
+-- 	return os.time()
+-- end
+
+function Context.wakeUp(sleepId:any)
+	sleeping[sleepId] = nil
+end
+
+function Context.sleep(sleepId:any,duration:number):(boolean,number) --// (didSleepWell,timePassed)
+	checkYieldSafe()
+	sleeping[sleepId] = true
+	local t = os.clock()
+	while sleeping[sleepId] and os.clock() - t < duration do
+		task.wait()
+	end
+	local success = sleeping[sleepId] ~= nil
 	if success then
-		sleepingThreads[sleepId] = nil
+		sleeping[sleepId] = nil
 	end
-	return success
+	return success,os.clock()-t
 end
 
-function module.yield(duration:number)
-	local t = tick()
-	while tick()-t < duration do
-
-	end
-	return tick()-t
+function Context.yield(duration:number)
+	checkYieldSafe()
+	local t = os.clock()
+	while os.clock()-t < duration do end
+	return os.clock()-t
 end
 
-function module.switch(value:any)
+function Context.switch(value:any)
 	return function(cases:{[any]:any,default:()->()?})
 		return (cases[value] or cases.default)()
 	end
 end
 
-function module.run(f:()->()):thread
-	local thread = createCoroutine(f)
-	resumeCoroutine(thread)
-	return thread
+--// extending task library
+for k,v in task do
+	Context[k] = v
 end
 
-function module.sleepAsync(duration:number,sleepId:any,callback):thread
-	return module.spawn(function()
-		local success = module.sleep(duration,sleepId)
-		if success then
-			callback()
-		end
-	end)
+--// hooking task.wait
+function Context.wait(duration:number?):number --// since you are not allowed to use wait inside of Context.Sync
+	checkYieldSafe()
+	return task.wait(duration)
 end
 
-function module.tickDebugStart(debugTickName:string)
-	debugTicks[debugTickName] = tick()
-end
-
-function module.tickDebugLog(debugTickName:string)
-	Console.logf("[Thread.tickDebugLog] %s: %s",debugTickName,tick()-debugTicks[debugTickName])
-end
-
-module.async = Promise.promisify
-module.when = when
-module.newBatcher = TaskQueue.new
-module.newEvent = Signal.new
-
-return module
+return Capsule(Context)::typeof(Context)&typeof(task)

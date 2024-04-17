@@ -13,7 +13,7 @@ local config = {
 	errorColor = Color3.fromRGB(255, 79, 79);
 	warnColor = Color3.fromRGB(255, 173, 80);
 	commandNotFoundMessage = "Unknown command \"%s\"";
-	debugInfoFormat = "[%s:$s] ";
+	debugInfoFormat = "[%s:%s] ";
 	debugCodeFormat = "[code: %s-%08d]";
 }
 local dummySilentFunction = function() end
