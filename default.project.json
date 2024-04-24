@@ -4,31 +4,22 @@
 		"$className": "DataModel",
 		"ServerScriptService": {
 			"$className": "ServerScriptService",
-			"Packages": {
+			"packages": {
 				"$path": "Packages",
-				"animator": {
-					"$path": "kit/animator"
-				},
 				"asset": {
 					"$path": "kit/asset"
-				},
-				"capsule": {
-					"$path": "kit/capsule"
 				},
 				"config": {
 					"$path": "kit/config"
 				},
-				"context": {
-					"$path": "kit/context"
-				},
 				"dashboard": {
 					"$path": "kit/dashboard"
 				},
-				"debug": {
-					"$path": "kit/debug"
+				"debugger": {
+					"$path": "kit/debugger"
 				},
-				"entity": {
-					"$path": "kit/entity"
+				"flow": {
+					"$path": "kit/flow"
 				},
 				"hook": {
 					"$path": "kit/hook"
@@ -42,8 +33,11 @@
 				"physics": {
 					"$path": "kit/physics"
 				},
-				"util": {
-					"$path": "kit/util"
+				"strict": {
+					"$path": "kit/strict"
+				},
+				"react": {
+					"$path": "kit/react"
 				},
 				"view": {
 					"$path": "kit/view"

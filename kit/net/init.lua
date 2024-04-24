@@ -1,63 +1,113 @@
+--!strict
+
 --// TODO: do event handling with Warp's signal
+
+--// kit
+local Hook = require(script.Parent.hook)
+local Debugger = require(script.Parent.debugger)
+local Strict = require(script.Parent.strict)
+local Net = Debugger.Module({})
+type Net = typeof(Net)
 
 --// dependencies
 local MsgPack = require(script.Parent["msgpack-luau"])
 local Promise = require(script.Parent.promise)
 local Warp = require(script.Parent.warp)
+local CRC16 = require(script.Parent.crc16)
+local Option = require(script.Parent.option)
 
 --// services
-local ReplicatedStorage = game:GetService"ReplicatedStorage"
-local Net = {}
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
-local isServer = require(core.libs.isserver)
-local masterkey = require(core.libs.masterkey)
-local createEvent = isServer and Warp.Server or Warp.Client
-local events = {}
-local outgoingStartedEvent
-local outgoingBuffer = nil
-local outgoingBufferUsed = 0
-local outgoingBufferSize = 0
-local outgoingInstances = {}
-local booleanMap = {
+local isServer = RunService:IsServer()
+local events:{[string]:Hook.Event<Option.Option<Player>>} = {}
+local outgoingEvent:Hook.Event<Option.Option<Player>>?
+local outgoingBuffer:buffer
+local outgoingBufferUsed:number
+local outgoingBufferSize:number
+local outgoingInstances:{Instance} = {}
+local incomingBuffer:buffer
+local incomingBufferRead:number
+local incomingInstances:{Instance}
+local booleanMap:{[any]:any} = {
+	[0] = false,
+	[1] = true,
 	[false] = 0,
 	[true] = 1
 }
-local numberBooleanMap = {
-	[0] = false,
-	[1] = true
-}
+
+Net.orderedInstanceReading = Strict.Mutable(false)
 
 local function initializeBuffer()
 	outgoingBufferSize = 64
 	outgoingBufferUsed = 0
 	outgoingBuffer = buffer.create(64)
+	table.clear(outgoingInstances)
 end
 
-local function allocate(size:number)
+local function allocate(size:number):number
+	if outgoingBufferUsed + size > outgoingBufferSize then
+		while outgoingBufferUsed + size > outgoingBufferSize do
+			outgoingBufferSize = outgoingBufferSize * 2
+		end
 
-end
+		local new_buff = buffer.create(outgoingBufferSize)
+		buffer.copy(new_buff, 0, outgoingBuffer, 0, outgoingBufferUsed)
 
-local function getEvent(messageName:string)
-	local event = events[messageName]
-	if not event then
-		event = createEvent(messageName)
-		events[messageName] = event
+		outgoingBuffer = new_buff
 	end
-	return event
+
+	local offset = outgoingBufferUsed
+	outgoingBufferUsed = outgoingBufferUsed + size
+
+	return offset
 end
+
+local function getEvent(messageName:string):Hook.Event<Option.Option<Player>>
+	local event = events[messageName]
+	if event then
+		return event
+	else
+		local newEvent = Hook()
+		newEvent.LimitedToSynchronized = true
+		events[messageName] = newEvent
+		if isServer then
+			local warp = Warp.Server(messageName)
+			newEvent._warp = warp
+			warp:Connect(function(player:Player,buf:buffer,instances:{Instance}) --- to cleanup, do DisconnectAll()
+				incomingBufferRead = 0
+				incomingBuffer = buf
+				incomingInstances = instances
+				newEvent:Fire(Option.Some(player))
+			end)
+			return newEvent
+		else
+			local warp = Warp.Client(messageName)
+			newEvent._warp = warp
+			warp:Connect(function(buf:buffer,instances:{Instance})
+				incomingBufferRead = 0
+				incomingBuffer = buf
+				incomingInstances = instances
+				newEvent:Fire(Option.None)
+			end)
+			return newEvent
+		end
+	end
+end
+
+Net.getReceiveEvent = getEvent
 
 function Net.start(messageName:string)
-	local event = createEvent(messageName)
-	currentStartedEvent = event
-	resetBuffer()
+	outgoingEvent = getEvent(messageName)
 end
 
 function Net.getServerTime()
-	return workspace:GetServerTimeNow(workspace)
+	return workspace:GetServerTimeNow()
 end
 
 local function newSharedRandom(key:string)
-	return Random.new(Net.getServerTime()*MMH3.hash32(key))
+	return Random.new(Net.getServerTime()*CRC16(key))
 end
 
 function Net.randomInt(key:string,min:number,max:number)
@@ -68,7 +118,7 @@ function Net.randomFloat(key:string,min:number,max:number)
 	return newSharedRandom(key):NextNumber(min,max)
 end
 
-if isServer then
+if RunService:IsServer() then
 	function Net.addNetworkString(messageName:string)
 		getEvent(messageName)
 	end
@@ -79,33 +129,32 @@ if isServer then
 	end
 
 	function Net.broadcast(unreliable:boolean)
-		currentStartedEvent:Fires(not unreliable,packBuffer(),currentInstanceArguments)
-		currentStartedEvent = nil
-		resetBuffer()
+		if not outgoingEvent then
+			error("No event was started, but 'broadcast()' was called")
+		end
+		outgoingEvent._warp:Fires(not unreliable,outgoingBuffer,#outgoingInstances>0 and outgoingInstances or nil)
+		outgoingEvent = nil
 	end
 
 	function Net.send(player:Player,unreliable:boolean?)
-		currentStartedEvent:Fire(not unreliable,player,packBuffer(),currentInstanceArguments)
-		currentStartedEvent = nil
-		resetBuffer()
-	end
-
-	function Net.getReceiveSignal(messageName:string)
-		local event = events[messageName]
-		if not event then
-
+		if not outgoingEvent then
+			error("No event was started, but 'send()' was called")
 		end
-		return
+		outgoingEvent._warp:Fire(not unreliable,player,outgoingBuffer,#outgoingInstances>0 and outgoingInstances or nil)
+		outgoingEvent = nil
+		initializeBuffer()
 	end
 
 	local fetchHandleStorage
-	function Net.onFetchAsync(address:string,callback:(player:Player)->())
+	function Net.onFetch(address:string,callback:(player:Player)->())
 		if not fetchHandleStorage then
 			fetchHandleStorage = Instance.new("Folder")
 			fetchHandleStorage.Name = "Kolloid.Net.FetchHandles"
 			fetchHandleStorage.Parent = ReplicatedStorage
 		end
-		Console.fatalfAssert(fetchHandleStorage:FindFirstChild(address)==nil,"fetch handle '%s' is already in use",address)
+		if fetchHandleStorage:FindFirstChild(address) ~= nil then
+			error(`fetch handle '{address}' is already in use`)
+		end
 		local remote = Instance.new("RemoteFunction")
 		remote.Name = address
 		remote.OnServerInvoke = callback
@@ -113,204 +162,167 @@ if isServer then
 	end
 
 	function Net.disconnectHandle(address:string)
-		local handle = fetchHandleStorage[address]
+		if not fetchHandleStorage then
+			error("Handle not initialized")
+		end
+		local handle = fetchHandleStorage:FindFirstChild(address)
+		if not handle then
+			error(`Handle '{address}' not found`)
+		end
 		handle:Destroy()
 		handle = nil
 	end
 else
 	function Net.sendToServer(unreliable:boolean)
-		currentStartedEvent:Fire(not unreliable,packBuffer(),currentInstanceArguments)
-		currentStartedEvent = nil
-		resetBuffer()
-	end
-
-	function Net.onReceive(messageName:string,callback,identifier:any?)
-		identifier = identifier or masterkey
-		local event = getEvent(messageName)
-		if not callback then
-			return event
+		if not outgoingEvent then
+			error("No event was started, but 'sendToServer()' was called")
 		end
-		local handles = getHandles(messageName,identifier)
-		handles[identifier] = event:Connect(function(buf,instanceArgs)
-			if disabled[messageName] then
-				return
-			end
-			currentBufferOffset = 0
-			currentBuffer = buf
-			currentInstanceArguments = instanceArgs
-			callback()
-		end)
-		return
-	end
-
-	function Net.onceReceive(messageName:string,callback,identifier:any?)
-		local event = getEvent(messageName)
-		local handles = getHandles(messageName,identifier)
-		handles[identifier] = event:Once(function(buf,instanceArgs)
-			Net.disconnectReceive(messageName,identifier)
-			if disabled[messageName] then
-				return
-			end
-			currentBufferOffset = 0
-			currentBuffer = buf
-			currentInstanceArguments = instanceArgs
-			callback()
-		end)
-	end
-
-	function Net.waitForReceive(messageName:string,callback)
-		local event = getEvent(messageName)
-		return event:Wait()
+		outgoingEvent._warp:Fire(not unreliable,outgoingBuffer,#outgoingInstances>0 and outgoingInstances or nil)
+		outgoingEvent = nil
+		initializeBuffer()
 	end
 
 	local fetchHandleStorage
-	function Net.fetchAsync(address:string,query:{})
+	function Net.fetch(address:string,query:{})
 		return Promise.new(function(resolve,reject,onCancel)
 			if not fetchHandleStorage then
 				fetchHandleStorage = ReplicatedStorage:WaitForChild("Kolloid.Net.FetchHandles")
 			end
-			local fetchHandle = fetchHandleStorage:WaitForChild(address)
+			local fetchHandle = fetchHandleStorage:WaitForChild(address)::RemoteFunction
 			local data = fetchHandle:InvokeServer(query)
 			resolve(data)
 		end)
 	end
 end
 
-function Net.writeInt8(integer:number)
-	currentBufferOffset += 1
-	table.insert(currentBufferQueue,{buffer.writei8,integer})
+function Net.writeInt8(int8:number):Net
+	buffer.writei8(outgoingBuffer,allocate(1),int8)
+	return Net
+end;Debugger.Inspector(function(x)
+	if x > math.pow(2,8)-1 then
+		error("dang")
+	end
+end)
+
+function Net.readInt8():number
+	local i8 = buffer.readi8(incomingBuffer,incomingBufferRead)
+	incomingBufferRead += 1
+	return i8
+end
+
+function Net.writeInt16(int16:number):Net
+	buffer.writei16(outgoingBuffer,allocate(2),int16)
 	return Net
 end
 
-function Net.readInt8()
-	local integer = buffer.readi8(currentBuffer,currentBufferOffset)
-	currentBufferOffset += 1
-	return integer
+function Net.readInt16():number
+	local i16 = buffer.readi16(incomingBuffer,incomingBufferRead)
+	incomingBufferRead += 2
+	return i16
 end
 
-function Net.writeInt16(integer:number)
-	currentBufferOffset += 2
-	table.insert(currentBufferQueue,{buffer.writei16,integer})
+function Net.writeInt32(i32:number):Net
+	buffer.writei32(outgoingBuffer,allocate(4),i32)
 	return Net
 end
 
-function Net.readInt16()
-	local integer = buffer.readi16(currentBuffer,currentBufferOffset)
-	currentBufferOffset += 2
-	return integer
+function Net.readInt32():number
+	local i32 = buffer.readi32(incomingBuffer,incomingBufferRead)
+	incomingBufferRead += 4
+	return i32
 end
 
-function Net.writeInt32(integer:number)
-	currentBufferOffset += 4
-	table.insert(currentBufferQueue,{buffer.writei32,integer})
+function Net.writeUInt8(u8:number):Net
+	buffer.writeu8(outgoingBuffer,allocate(1),u8)
 	return Net
 end
 
-function Net.readInt32()
-	local integer = buffer.readi32(currentBuffer,currentBufferOffset)
-	currentBufferOffset += 4
-	return integer
+function Net.readUInt8():number
+	local u8 = buffer.readu8(incomingBuffer,incomingBufferRead)
+	incomingBufferRead += 1
+	return u8
 end
 
-function Net.writeUInt8(unsignedInteger:number)
-	currentBufferOffset += 1
-	table.insert(currentBufferQueue,{buffer.writeu8,unsignedInteger})
+function Net.writeUInt16(u16:number):Net
+	buffer.writeu16(outgoingBuffer,allocate(2),u16)
 	return Net
 end
 
-function Net.readUInt8()
-	local unsignedInteger = buffer.readu8(currentBuffer,currentBufferOffset)
-	currentBufferOffset += 1
-	return unsignedInteger
+function Net.readUInt16():number
+	local u16 = buffer.readu16(incomingBuffer,incomingBufferRead)
+	incomingBufferRead += 2
+	return u16
 end
 
-function Net.writeUInt16(unsignedInteger:number)
-	currentBufferOffset += 2
-	table.insert(currentBufferQueue,{buffer.writeu16,unsignedInteger})
+function Net.writeUInt32(u32:number):Net
+	buffer.writeu32(outgoingBuffer,allocate(4),u32)
 	return Net
 end
 
-function Net.readUInt16()
-	local unsignedInteger = buffer.readu16(currentBuffer,currentBufferOffset)
-	currentBufferOffset += 2
-	return unsignedInteger
+function Net.readUInt32():number
+	local u32 = buffer.readu32(incomingBuffer,incomingBufferRead)
+	incomingBufferRead += 4
+	return u32
 end
 
-function Net.writeUInt32(unsignedInteger:number)
-	currentBufferOffset += 4
-	table.insert(currentBufferQueue,{buffer.writeu32,unsignedInteger})
+function Net.writeFloat32(f32:number):Net
+	buffer.writef32(outgoingBuffer,allocate(4),f32)
 	return Net
 end
 
-function Net.readUInt32()
-	local unsignedInteger = buffer.readu32(currentBuffer,currentBufferOffset)
-	currentBufferOffset += 4
-	return unsignedInteger
+function Net.readFloat32():number
+	local f32 = buffer.readf32(incomingBuffer,incomingBufferRead)
+	incomingBufferRead += 4
+	return f32
 end
 
-function Net.writeFloat(float:number)
-	currentBufferOffset += 4
-	table.insert(currentBufferQueue,{buffer.writef32,float})
+function Net.writeFloat64(f64:number):Net
+	buffer.writef64(outgoingBuffer,allocate(8),f64)
 	return Net
 end
 
-function Net.readFloat()
-	local float = buffer.readf32(currentBuffer,currentBufferOffset)
-	currentBufferOffset += 4
-	return float
+function Net.readFloat64():number
+	local f64 = buffer.readf64(incomingBuffer,incomingBufferRead)
+	incomingBufferRead += 8
+	return f64
 end
 
-function Net.writeDouble(double:number)
-	currentBufferOffset += 8
-	table.insert(currentBufferQueue,{buffer.writef64,double})
+function Net.writeBool(boolean:boolean):Net
+	buffer.writeu8(outgoingBuffer,allocate(1),booleanMap[boolean])
 	return Net
 end
 
-function Net.readDouble()
-	local double = buffer.readf64(currentBuffer,currentBufferOffset)
-	currentBufferOffset += 8
-	return double
-end
-
-function Net.writeBool(boolean:boolean)
-	currentBufferOffset += 1
-	table.insert(currentBufferQueue,{buffer.writeu8,booleanMap[boolean]})
-	return Net
-end
-
-function Net.readBool()
-	local boolean = numberBooleanMap[buffer.readu8(currentBuffer,currentBufferOffset)]
-	currentBufferOffset += 1
+function Net.readBool():boolean
+	local boolean = booleanMap[buffer.readu8(incomingBuffer,incomingBufferRead)]
+	incomingBufferRead += 1
 	return boolean
 end
 
-function Net.writeString(str:string)
-	Net.writeUInt16(#str)
-	currentBufferOffset += #str
-	table.insert(currentBufferQueue,{buffer.writestring,str})
+function Net.writeString(str:string):Net
+	local len = #str
+	Net.writeUInt16(len)
+	buffer.writestring(outgoingBuffer,allocate(len),str,len)
 	return Net
 end
 
-function Net.readString()
-	local length = Net.readUInt16()
-	local str = buffer.readstring(currentBuffer,currentBufferOffset,length)
-	currentBufferOffset += #str
+function Net.readString():string
+	local len = Net.readUInt16()
+	local str = buffer.readstring(incomingBuffer,incomingBufferRead,len)
+	incomingBufferRead += #str
 	return str
 end
 
-function Net.writeChar(char:string)
-	currentBufferOffset += 1
-	table.insert(currentBufferQueue,{buffer.writestring,char})
+function Net.writeChar(char:string):Net
+	Net.writeUInt8(char:byte())
 	return Net
 end
 
-function Net.readChar()
-	local str = buffer.readstring(currentBuffer,currentBufferOffset,1)
-	currentBufferOffset += 1
-	return str
+function Net.readChar():string
+	local char = string.char(Net.readUInt8())
+	return char
 end
 
-function Net.writeBuffer(b:buffer)
+function Net.writeBuffer(b:buffer):Net
 	Net.writeString(buffer.tostring(b))
 	return Net
 end
@@ -319,7 +331,7 @@ function Net.readBuffer()
 	return buffer.fromstring(Net.readString())
 end
 
-function Net.writeVector3(vector3:Vector3)
+function Net.writeVector3(vector3:Vector3):Net
 	Net.writeFloat(vector3.X)
 	Net.writeFloat(vector3.Y)
 	Net.writeFloat(vector3.Z)
@@ -330,7 +342,7 @@ function Net.readVector3()
 	return Vector3.new(Net.readFloat(),Net.readFloat(),Net.readFloat())
 end
 
-function Net.writeVector3Int16(vector3:Vector3)
+function Net.writeVector3Int16(vector3:Vector3):Net
 	Net.writeInt16(vector3.X)
 	Net.writeInt16(vector3.Y)
 	Net.writeInt16(vector3.Z)
@@ -341,7 +353,7 @@ function Net.readVector3Int16()
 	return Vector3.new(Net.readInt16(),Net.readInt16(),Net.readInt16())
 end
 
-function Net.writeVector2(vector2:Vector2)
+function Net.writeVector2(vector2:Vector2):Net
 	Net.writeFloat(vector2.X)
 	Net.writeFloat(vector2.Y)
 	return Net
@@ -351,7 +363,7 @@ function Net.readVector2()
 	return Vector2.new(Net.readFloat(),Net.readFloat())
 end
 
-function Net.writeVector2Int16(vector2:Vector2)
+function Net.writeVector2Int16(vector2:Vector2):Net
 	Net.writeInt16(vector2.X)
 	Net.writeInt16(vector2.Y)
 	return Net
@@ -361,7 +373,7 @@ function Net.readVector2Int16()
 	return Vector2.new(Net.readInt16(),Net.readInt16())
 end
 
-function Net.writeColor3(color3:Color3)
+function Net.writeColor3(color3:Color3):Net --- 32 * 3 = 96 bytes
 	Net.writeFloat(color3.R)
 	Net.writeFloat(color3.G)
 	Net.writeFloat(color3.B)
@@ -372,15 +384,18 @@ function Net.readColor3()
 	return Color3.new(Net.readFloat(),Net.readFloat(),Net.readFloat())
 end
 
-function Net.writeColor3fromRGB(color3fromrgb:Color3)
-
+function Net.writeColor3Int8(color3:Color3):Net --- 8 * 3 = 24 bytes
+	Net.writeUInt8(math.round(color3.R*255))
+	Net.writeUInt8(math.round(color3.G*255))
+	Net.writeUInt8(math.round(color3.B*255))
+	return Net
 end
 
-function Net.readColor3fromRGB()
-
+function Net.readColor3Int8():Color3
+	return Color3.fromRGB(Net.readUInt8(),Net.readUInt8(),Net.readUInt8())
 end
 
-function Net.writeBrickColor(brickColor:BrickColor)
+function Net.writeBrickColor(brickColor:BrickColor):Net
 	Net.writeUInt32(brickColor.Number)
 	return Net
 end
@@ -389,7 +404,7 @@ function Net.readBrickColor()
 	return BrickColor.new(Net.readUInt32())
 end
 
-function Net.writeUDim(udim:UDim)
+function Net.writeUDim(udim:UDim):Net
 	Net.writeFloat(udim.Scale)
 	Net.writeInt32(udim.Offset)
 	return Net
@@ -399,7 +414,7 @@ function Net.readUDim()
 	return UDim.new(Net.readFloat(),Net.readInt32())
 end
 
-function Net.writeUDim2(udim2:UDim2)
+function Net.writeUDim2(udim2:UDim2):Net
 	Net.writeUDim(udim2.X)
 	Net.writeUDim(udim2.Y)
 	return Net
@@ -409,7 +424,7 @@ function Net.readUDim2()
 	return UDim2.new(Net.readUDim(),Net.readUDim())
 end
 
-function Net.writeRotation(cframe:CFrame)
+function Net.writeRotation(cframe:CFrame):Net
 	local LookVector = cframe.LookVector
 	local Azumith = math.atan2(-LookVector.X, -LookVector.Z)
 	local Elevation = math.atan2(LookVector.Y, math.sqrt(LookVector.X * LookVector.X + LookVector.Z * LookVector.Z))
@@ -450,7 +465,7 @@ function Net.readRotation()
 	return Rotation
 end
 
-function Net.writeCFrame(cframe:CFrame)
+function Net.writeCFrame(cframe:CFrame):Net
 	Net.writeVector3(cframe.Position)
 	Net.writeRotation(cframe)
 	return Net
@@ -475,32 +490,44 @@ function Net.readCFrame()
 	return Position * Rotation
 end
 
-function Net.writeTable(t:{})
-	Net.writeString(MessagePack.pack(t))
+function Net.writeTable(t:{[any]:any}):Net
+	Net.writeString(MsgPack.encode(t))
 	return Net
 end
 
-function Net.readTable()
-	return MessagePack.unpack(Net.readString())
+function Net.readTable():{[any]:any}
+	return MsgPack.decode(Net.readString())
 end
 
-function Net.writeInstance(instance:Instance) --- defer
-	table.insert(currentInstanceArguments,instance)
+function Net.writeInstance(instance:Instance):Net
+	table.insert(outgoingInstances,instance)
 	return Net
 end
 
 function Net.readInstance()
-	local instance = currentInstanceArguments[1]
-	table.remove(currentInstanceArguments,1)
+	local instance = incomingInstances[1]
+	table.remove(incomingInstances,1)
 	return instance
 end
 
+--// ORDERED INSTANCE READING (should i support this?)
+-- function Net.writeInstance(instance:Instance):Net
+-- 	table.insert(outgoingInstances,instance)
+-- 	Net.writeUInt8(#outgoingInstances)
+-- 	return Net
+-- end
+
+-- function Net.readInstance()
+-- 	local instance = incomingInstances[Net.readUInt8()]
+-- 	return instance
+-- end
+
 function Net.readAllInstances()
-	return currentInstanceArguments
+	return outgoingInstances
 end
 
-function Net.writeTimestamp()
-	Net.writeDouble(Net.getServerTime(workspace))
+function Net.writeTimestamp():Net
+	Net.writeDouble(Net.getServerTime())
 	return Net
 end
 
@@ -508,4 +535,6 @@ function Net.readTimestamp()
 	return Net.readDouble()
 end
 
-return Net
+initializeBuffer()
+
+return Strict.Capsule(Net)

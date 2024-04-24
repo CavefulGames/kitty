@@ -1,6 +1,9 @@
-local core = script.Parent.Parent
-local RunService = game:GetService"RunService"
-local Players = game:GetService"Players"
+--// kit
+local React = require(script.Parent.react)
+
+--// services
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
 local isStudio = RunService:IsStudio()
 local silentLog = false

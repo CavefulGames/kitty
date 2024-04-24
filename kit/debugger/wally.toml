@@ -1,7 +1,9 @@
 [package]
-name = "dongd5ng/util"
+name = "dongd5ng/debugger"
 version = "0.1.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 
 [dependencies]
+# kit
+strict = "jiwonz/strict@^0.1.0"

@@ -16,7 +16,7 @@ impl KitSubcommand {
 		];
 		let defaults = &[false, false, false, false];
 		let selections = MultiSelect::with_theme(&ColorfulTheme::default())
-			.with_prompt("Select packages to add")
+			.with_prompt("Select kits to add")
 			.items(&multiselected[..])
 			.defaults(&defaults[..])
 			.interact()

@@ -1,19 +1,25 @@
-local Capsule = require(script.Parent.capsule)
+--!strict
+
+--// dependencies
+local Strict = require(script.Parent.strict)
 local Context = {}
 
 local sleeping = {}
 local freeThreads: { thread } = {}
-local synchronized = false
+
+--// properties
+local synchronized = Strict.Mutable(false)
+Context.synchronized = synchronized
 
 local function checkYieldSafe()
-	if synchronized then
+	if synchronized() then
 		error("Not allowed to yield or wait while the current context is synchronized")
 	end
 end
 
-local function runCallback(callback, thread, ...)
+local function runCallback(callback,thread,...)
 	callback(...)
-	table.insert(freeThreads, thread)
+	table.insert(freeThreads,thread)
 end
 
 local function yielder()
@@ -24,6 +30,8 @@ end
 
 local AsyncMetatable = {}
 AsyncMetatable.__index = AsyncMetatable
+
+export type AsyncFunction<T...,U...> = (T...)->(U...)&{await:(self:AsyncFunction<T...,U...>,T...)->(U...)}
 
 function AsyncMetatable:await(...)
 	return self._fn(...)
@@ -40,23 +48,25 @@ function AsyncMetatable:__call(...)
 			thread = coroutine.create(yielder)
 			coroutine.resume(thread)
 		end
+		synchronized(false)
 		task.spawn(thread,fn,thread,...)
 	end
 end
 
-function Context.Async(f:(...any)->(any))
-	return setmetatable({_fn = f},AsyncMetatable)
+function Context.Async<T...,U...>(f:(T...)->(U...)):AsyncFunction<T...,U...>
+	return setmetatable({_fn = f},AsyncMetatable)::AsyncFunction<T...,U...>
 end
 
-function Context.Sync(f:(...any)->(any)) --// to force synchronization and run the function, wrap it with the Sync
+function Context.Sync<T...,U...>(f:(T...)->(U...)) --// to force synchronization and run the function, wrap it with the Sync
 	return function(...)
-		synchronized = true
+		synchronized(true)
 		f(...)
-		synchronized = false
+		synchronized(false)
 	end
 end
 
-function Context.isAsync(obj:any)
+function Context.isAsync(obj:any):boolean
+	return type(obj) == "table" and getmetatable(obj) == AsyncMetatable
 end
 
 -- function Context.getGameTime()
@@ -113,4 +123,4 @@ function Context.wait(duration:number?):number --// since you are not allowed to
 	return task.wait(duration)
 end
 
-return Capsule(Context)::typeof(Context)&typeof(task)
+return Strict.Capsule(Context)::typeof(Context)&typeof(task)

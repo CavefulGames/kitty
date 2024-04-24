@@ -1,0 +1,11 @@
+[package]
+name = "jiwonz/react"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
+reactlua = "jsdotlua/react@17.1.0"
+react-roblox = "jsdotlua/react-roblox@17.1.0"
+# kit
+strict = "jiwonz/strict@^0.1.0"

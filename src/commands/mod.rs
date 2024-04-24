@@ -1,8 +1,10 @@
 mod install;
 mod kit;
+mod reload;
 
 pub use install::InstallSubcommand;
 pub use kit::KitSubcommand;
+pub use reload::ReloadSubcommand;
 
 use structopt::StructOpt;
 
@@ -18,6 +20,7 @@ impl Args {
         match self.subcommand {
             Subcommand::Install(subcommand) => subcommand.run(),
 			Subcommand::Kit(subcommand) => subcommand.run(),
+            Subcommand::Reload(subcommand) => subcommand.run(),
         }
     }
 }
@@ -26,4 +29,5 @@ impl Args {
 pub enum Subcommand {
     Install(InstallSubcommand),
 	Kit(KitSubcommand),
+    Reload(ReloadSubcommand),
 }

@@ -6,3 +6,9 @@ realm = "shared"
 
 [dependencies]
 msgpack-luau = "cipharius/msgpack-luau@0.3.0"
+crc16 = "jiwonz/crc16@0.1.0"
+option = "lukadev-0/option@1.0.0"
+# kit
+hook = "jiwonz/hook@^0.1.0"
+debugger = "jiwonz/debugger@^0.1.0"
+strict = "jiwonz/strict@^0.1.0"
