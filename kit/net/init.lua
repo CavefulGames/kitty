@@ -21,8 +21,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local isServer = RunService:IsServer()
-local events:{[string]:Hook.Event<Option.Option<Player>>} = {}
-local outgoingEvent:Hook.Event<Option.Option<Player>>?
+local events:{[string]:Hook.HookedEvent<Option.Option<Player>>} = {}
+local outgoingEvent:Hook.HookedEvent<Option.Option<Player>>?
 local outgoingBuffer:buffer
 local outgoingBufferUsed:number
 local outgoingBufferSize:number
@@ -64,7 +64,7 @@ local function allocate(size:number):number
 	return offset
 end
 
-local function getEvent(messageName:string):Hook.Event<Option.Option<Player>>
+local function getEvent(messageName:string):Hook.HookedEvent<Option.Option<Player>>
 	local event = events[messageName]
 	if event then
 		return event
@@ -199,6 +199,7 @@ function Net.writeInt8(int8:number):Net
 	buffer.writei8(outgoingBuffer,allocate(1),int8)
 	return Net
 end;Debugger.Inspector(function(x)
+	Strict.expect(x,"number")
 	if x > math.pow(2,8)-1 then
 		error("dang")
 	end
@@ -213,7 +214,9 @@ end
 function Net.writeInt16(int16:number):Net
 	buffer.writei16(outgoingBuffer,allocate(2),int16)
 	return Net
-end
+end;Debugger.Inspector(function(x)
+
+end)
 
 function Net.readInt16():number
 	local i16 = buffer.readi16(incomingBuffer,incomingBufferRead)
@@ -327,7 +330,7 @@ function Net.writeBuffer(b:buffer):Net
 	return Net
 end
 
-function Net.readBuffer()
+function Net.readBuffer():buffer
 	return buffer.fromstring(Net.readString())
 end
 
@@ -338,19 +341,19 @@ function Net.writeVector3(vector3:Vector3):Net
 	return Net
 end
 
-function Net.readVector3()
+function Net.readVector3():Vector3
 	return Vector3.new(Net.readFloat(),Net.readFloat(),Net.readFloat())
 end
 
-function Net.writeVector3Int16(vector3:Vector3):Net
+function Net.writeVector3Int16(vector3:Vector3int16):Net
 	Net.writeInt16(vector3.X)
 	Net.writeInt16(vector3.Y)
 	Net.writeInt16(vector3.Z)
 	return Net
 end
 
-function Net.readVector3Int16()
-	return Vector3.new(Net.readInt16(),Net.readInt16(),Net.readInt16())
+function Net.readVector3Int16():Vector3int16
+	return Vector3int16.new(Net.readInt16(),Net.readInt16(),Net.readInt16())
 end
 
 function Net.writeVector2(vector2:Vector2):Net
@@ -359,18 +362,18 @@ function Net.writeVector2(vector2:Vector2):Net
 	return Net
 end
 
-function Net.readVector2()
+function Net.readVector2():Vector2
 	return Vector2.new(Net.readFloat(),Net.readFloat())
 end
 
-function Net.writeVector2Int16(vector2:Vector2):Net
+function Net.writeVector2Int16(vector2:Vector2int16):Net
 	Net.writeInt16(vector2.X)
 	Net.writeInt16(vector2.Y)
 	return Net
 end
 
-function Net.readVector2Int16()
-	return Vector2.new(Net.readInt16(),Net.readInt16())
+function Net.readVector2Int16():Vector2int16
+	return Vector2int16.new(Net.readInt16(),Net.readInt16())
 end
 
 function Net.writeColor3(color3:Color3):Net --- 32 * 3 = 96 bytes
@@ -380,7 +383,7 @@ function Net.writeColor3(color3:Color3):Net --- 32 * 3 = 96 bytes
 	return Net
 end
 
-function Net.readColor3()
+function Net.readColor3():Color3
 	return Color3.new(Net.readFloat(),Net.readFloat(),Net.readFloat())
 end
 
@@ -400,7 +403,7 @@ function Net.writeBrickColor(brickColor:BrickColor):Net
 	return Net
 end
 
-function Net.readBrickColor()
+function Net.readBrickColor():BrickColor
 	return BrickColor.new(Net.readUInt32())
 end
 
@@ -410,7 +413,7 @@ function Net.writeUDim(udim:UDim):Net
 	return Net
 end
 
-function Net.readUDim()
+function Net.readUDim():UDim
 	return UDim.new(Net.readFloat(),Net.readInt32())
 end
 
@@ -420,7 +423,7 @@ function Net.writeUDim2(udim2:UDim2):Net
 	return Net
 end
 
-function Net.readUDim2()
+function Net.readUDim2():UDim2
 	return UDim2.new(Net.readUDim(),Net.readUDim())
 end
 
@@ -446,7 +449,7 @@ function Net.writeRotation(cframe:CFrame):Net
 	return Net
 end
 
-function Net.readRotation()
+function Net.readRotation():CFrame
 	--local Azumith = buffer:ReadInt(22)
 	local Azumith = Net.readInt32()
 	--local Roll = buffer:ReadInt(21)
@@ -471,7 +474,7 @@ function Net.writeCFrame(cframe:CFrame):Net
 	return Net
 end
 
-function Net.readCFrame()
+function Net.readCFrame():CFrame
 	local Position = CFrame.new(Net.readVector3())
 
 	--local Azumith = buffer:ReadInt(22)
@@ -491,12 +494,14 @@ function Net.readCFrame()
 end
 
 function Net.writeTable(t:{[any]:any}):Net
-	Net.writeString(MsgPack.encode(t))
+	Net.writeBuffer(buffer.fromstring(MsgPack.encode(t)))
 	return Net
-end
+end;Debugger.Inspector(function()
+
+end)
 
 function Net.readTable():{[any]:any}
-	return MsgPack.decode(Net.readString())
+	return MsgPack.decode(buffer.tostring(Net.readBuffer()))
 end
 
 function Net.writeInstance(instance:Instance):Net
@@ -504,7 +509,7 @@ function Net.writeInstance(instance:Instance):Net
 	return Net
 end
 
-function Net.readInstance()
+function Net.readInstance():Instance
 	local instance = incomingInstances[1]
 	table.remove(incomingInstances,1)
 	return instance
@@ -522,7 +527,7 @@ end
 -- 	return instance
 -- end
 
-function Net.readAllInstances()
+function Net.readAllInstances():{Instance}
 	return outgoingInstances
 end
 
@@ -531,7 +536,7 @@ function Net.writeTimestamp():Net
 	return Net
 end
 
-function Net.readTimestamp()
+function Net.readTimestamp():number
 	return Net.readDouble()
 end
 

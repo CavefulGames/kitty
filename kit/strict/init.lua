@@ -85,7 +85,7 @@ function Strict.Capsule(module)
 	return table.freeze(module)
 end
 
-function Strict.Mutable<T>(initialValue:T):(newValue:T?)->(T)
+function Strict.Mutable<T>(initialValue:T,callback:(newValue:T)->()):(newValue:T?)->(T)
 	local value = initialValue
 	local t = typeof(initialValue)
 	return function(newValue:T?):T
@@ -94,6 +94,7 @@ function Strict.Mutable<T>(initialValue:T):(newValue:T?)->(T)
 				error(`{t} expected, got {typeof(newValue)}`,2)
 			end
 			value = newValue
+			callback(newValue)
 		end
 		return value
 	end

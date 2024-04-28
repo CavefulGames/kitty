@@ -17,26 +17,26 @@ export type Connection = {
 	[string]:any
 }
 
-export type Event<T...> = {
+export type HookedEvent<T...> = {
 	RBXScriptConnection: RBXScriptConnection?,
 	RBXScriptSignal: RBXScriptSignal?,
 	Enabled: boolean,
 	LimitedToSynchronized: boolean,
-	Bind: (self: Event<T...>, fn: (T...) -> ()) -> Connection,
-	BindNamed: (self: Event<T...>, name:string, fn: (T...) -> ()) -> Connection,
-	BindOnce: (self: Event<T...>, fn: (T...) -> ()) -> Connection,
-	BindOnceNamed: (self: Event<T...>, name:string, fn: (...any) -> ()) -> Connection,
-	Wait: (self: Event<T...>) -> T...,
-	Fire: (self: Event<T...>, T...) -> (),
-	UnbindAll: (self: Event<T...>) -> (),
-	UnbindNamed: (self: Event<T...>, name:string) -> (),
-	EnableNamed: (self: Event<T...>, name:string) -> (),
-	DisableNamed: (self: Event<T...>, name:string) -> (),
-	Destroy: (self: Event<T...>) -> (),
+	Bind: (self: HookedEvent<T...>, fn: (T...) -> ()) -> Connection,
+	BindNamed: (self: HookedEvent<T...>, name:string, fn: (T...) -> ()) -> Connection,
+	BindOnce: (self: HookedEvent<T...>, fn: (T...) -> ()) -> Connection,
+	BindOnceNamed: (self: HookedEvent<T...>, name:string, fn: (...any) -> ()) -> Connection,
+	Wait: (self: HookedEvent<T...>) -> T...,
+	Fire: (self: HookedEvent<T...>, T...) -> (),
+	UnbindAll: (self: HookedEvent<T...>) -> (),
+	UnbindNamed: (self: HookedEvent<T...>, name:string) -> (),
+	EnableNamed: (self: HookedEvent<T...>, name:string) -> (),
+	DisableNamed: (self: HookedEvent<T...>, name:string) -> (),
+	Destroy: (self: HookedEvent<T...>) -> (),
 	[string]:any
 }
 
-local function checkSyncLimitation<T...>(self:Event<T...>,fn:(T...)->()|Flow.AsyncFunction<T...>):never?
+local function checkSyncLimitation<T...>(self:HookedEvent<T...>,fn:(T...)->()|Flow.AsyncFunction<T...>):never?
 	if self.LimitedToSynchronized and Flow.isAsync(fn) then
 		return error("While this event is limited to synchronized functions, tried to bind an AsyncFunction")
 	end
@@ -102,7 +102,7 @@ local rbxConnect, rbxDisconnect do
 	end
 end
 
-local function connect<T...>(self: Event<T...>, fn: ((T...) -> ())|Flow.AsyncFunction<T...>): Connection
+local function connect<T...>(self: HookedEvent<T...>, fn: ((T...) -> ())|Flow.AsyncFunction<T...>): Connection
 	checkSyncLimitation(self,fn)
 	local head = self._head
 	local cn = setmetatable({
@@ -123,7 +123,7 @@ local function connect<T...>(self: Event<T...>, fn: ((T...) -> ())|Flow.AsyncFun
 	return cn::any
 end
 
-local function once<T...>(self: Event<T...>, fn: (T...) -> ()|Flow.AsyncFunction<T...>)
+local function once<T...>(self: HookedEvent<T...>, fn: (T...) -> ()|Flow.AsyncFunction<T...>)
 	checkSyncLimitation(self,fn)
 	local cn
 	cn = connect(self, function(...:T...)
@@ -133,7 +133,7 @@ local function once<T...>(self: Event<T...>, fn: (T...) -> ()|Flow.AsyncFunction
 	return cn
 end
 
-local function wait<T...>(self: Event<T...>): ...any
+local function wait<T...>(self: HookedEvent<T...>): ...any
 	local thread = coroutine.running()
 	local cn
 	cn = connect(self, function(...)
@@ -143,7 +143,7 @@ local function wait<T...>(self: Event<T...>): ...any
 	return coroutine.yield()
 end
 
-local function fire<T...>(self: Event<T...>, ...: T...)
+local function fire<T...>(self: HookedEvent<T...>, ...: T...)
 	if not self.Enabled then
 		return
 	end
@@ -156,7 +156,7 @@ local function fire<T...>(self: Event<T...>, ...: T...)
 	end
 end
 
-local function disconnectAll<T...>(self: Event<T...>)
+local function disconnectAll<T...>(self: HookedEvent<T...>)
 	local cn = self._head
 	while cn do
 		disconnect(cn)
@@ -164,7 +164,7 @@ local function disconnectAll<T...>(self: Event<T...>)
 	end
 end
 
-local function destroy<T...>(self: Event<T...>)
+local function destroy<T...>(self: HookedEvent<T...>)
 	disconnectAll(self)
 	local cn = self.RBXScriptConnection
 	if cn then
@@ -213,8 +213,8 @@ Signal.DisableNamed = function(self,name:string)
 end
 Signal.Destroy = destroy
 
-return function(signal:RBXScriptSignal?):Event<...any>
-	local event = (setmetatable({ _head = false, Enabled = true }, Signal)::any)::Event<...any>
+return function(signal:RBXScriptSignal?):HookedEvent<...any>
+	local event = (setmetatable({ _head = false, Enabled = true }, Signal)::any)::HookedEvent<...any>
 	if signal ~= nil then
 		event.RBXScriptSignal = signal
 		if typeof(signal) == "RBXScriptSignal" then
@@ -227,5 +227,5 @@ return function(signal:RBXScriptSignal?):Event<...any>
 			end)
 		end
 	end
-	return event::Event<...any>
+	return event::HookedEvent<...any>
 end

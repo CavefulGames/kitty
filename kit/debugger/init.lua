@@ -8,11 +8,13 @@ local Debugger = {}
 
 --// services
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+--// instances
+local LocalPlayer = Players.LocalPlayer
 
 local isStudio = RunService:IsStudio()
 local dummySilentFunction = function()end
-local currentModule:{[string?]:any}?
-local currentMethodName:string?
 local tagFormat = "[ %s ]"
 
 Debugger.silent = setmetatable({},{
@@ -20,7 +22,7 @@ Debugger.silent = setmetatable({},{
 		return if isStudio then Debugger[k] else dummySilentFunction
 	end
 })
-Debugger.onMessage = Hook()::Hook.Event<...any>
+Debugger.onMessage = Hook()::Hook.HookedEvent<...any>
 Debugger.enabled = Strict.Mutable(false)
 Debugger.visible = Strict.Mutable(true)
 
@@ -61,31 +63,8 @@ function Debugger.assertf(assertion:boolean,message:string,...:string)
 
 end
 
-local DebuggerModule = {}
-
-function DebuggerModule:__newindex(k,v)
-	if type(v) == "function" then
-		currentModule = self
-		currentMethodName = k
-		rawset(self::{},k,v)
-	end
-end
-
-function Debugger.Module<T>(initialTable:T):T
-	Strict.expect(initialTable,"table")
-	return setmetatable({},DebuggerModule)::any
-end
-
-function Debugger.Inspector<T...,U...>(fn:(T...)->(U...))
-	if currentModule and currentMethodName then
-		local method = currentModule[currentMethodName]
-		currentModule[currentMethodName] = function(...:T...):U...
-			fn(...)
-			method(...)
-		end
-		currentModule = nil
-		currentMethodName = nil
-	end
+function Debugger.fatality(fatalityCode:number)
+	LocalPlayer:Kick()
 end
 
 return Strict.Capsule(Debugger)

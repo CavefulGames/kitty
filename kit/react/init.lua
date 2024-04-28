@@ -10,8 +10,11 @@ local Event = ReactLua.Event
 
 React.Roblox = ReactRoblox
 
-function React.Element<T>(class:T):(props:T)->() --- only works with '--!nocheck' enabled
-	return function(props:T)
+function React.Element<T>(class:T):(props:T?)->() --- only works with '--!nocheck' enabled :(
+	return function(props:T?)
+		if props == nil then
+			return ReactLua.createElement(class::any)
+		end
 		if type(props) ~= "table" then
 			error(Strict.ExpectException(props,"table"))
 		end

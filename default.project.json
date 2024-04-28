@@ -9,6 +9,9 @@
 				"asset": {
 					"$path": "kit/asset"
 				},
+				"bricklayer": {
+					"$path": "kit/bricklayer"
+				},
 				"config": {
 					"$path": "kit/config"
 				},
@@ -24,6 +27,9 @@
 				"hook": {
 					"$path": "kit/hook"
 				},
+				"i18n": {
+					"$path": "kit/i18n"
+				},
 				"input": {
 					"$path": "kit/input"
 				},
@@ -33,11 +39,11 @@
 				"physics": {
 					"$path": "kit/physics"
 				},
-				"strict": {
-					"$path": "kit/strict"
-				},
 				"react": {
 					"$path": "kit/react"
+				},
+				"strict": {
+					"$path": "kit/strict"
 				},
 				"view": {
 					"$path": "kit/view"

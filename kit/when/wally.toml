@@ -6,4 +6,7 @@ realm = "shared"
 
 [dependencies]
 # kit
+hook = "jiwonz/hook@^0.1.0"
 flow = "jiwonz/flow@^0.1.0"
+strict = "jiwonz/strict@^0.1.0"
+net = "jiwonz/net@^0.1.0"

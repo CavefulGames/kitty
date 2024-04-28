@@ -1,6 +1,6 @@
 local core = script.Parent.Parent
 local Camera = workspace.CurrentCamera
-local UserInputService = game:GetService"UserInputService"
+local UserInputService = game:GetService("UserInputService")
 
 local masterkey = require(core.libs.masterkey)
 local transition = 1

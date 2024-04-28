@@ -1,6 +1,9 @@
+-- TODO: how can i replicate server-sided when using Net
+
 --// depedencies
 local Hook = require(script.Parent.hook)
 local Flow = require(script.Parent.flow)
+local Strict = require(script.Parent.strict)
 
 --// services
 local RunService = game:GetService("RunService")
@@ -26,20 +29,25 @@ if RunService:IsServer() then --// server
 	events.SomeoneConnects = function()
 		return Hook(Players.PlayerAdded)
 	end
-	events.SomeoneSpawn = function()
+	events.SomeoneSpawns = function()
 		local event = Hook()
 		When.SomeoneConnects:Bind(function(player:Player)
 			player.CharacterAdded:Connect(function(character:Model)
-				event:Trigger(character)
+				event:Fire(player)
 			end)
 		end)
-		Context.
 		return event
 	end
 	events.SomeoneDies = function()
 		local event = Hook()
-		When.SomeoneSpawn:Bind(function(character:Model)
-			player.CharacterAdded:
+		When.SomeoneSpawns:Bind(function(character:Model)
+			local player = Players:GetPlayerFromCharacter(character)
+			local humanoid:Humanoid? = character:WaitForChild("Humanoid",5)::any
+			if humanoid then
+				humanoid.Died:Connect(function()
+					event:Fire(player)
+				end)
+			end
 		end)
 		return event
 	end
@@ -47,4 +55,8 @@ else --// shared
 
 end
 
-return
+return Strict.Capsule(When)::{
+	SomeoneConnects:Hook.HookedEvent<Player>;
+	SomeoneSpawns:Hook.HookedEvent<Player>;
+	SomeoneDies:Hook.HookedEvent<Player>;
+}
