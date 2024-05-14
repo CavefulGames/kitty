@@ -6,23 +6,12 @@
 			"$className": "ServerScriptService",
 			"packages": {
 				"$path": "Packages",
-				"asset": {
-					"$path": "kit/asset"
-				},
 				"bricklayer": {
 					"$path": "kit/bricklayer"
 				},
-				"config": {
-					"$path": "kit/config"
-				},
-				"dashboard": {
-					"$path": "kit/dashboard"
-				},
+
 				"debugger": {
 					"$path": "kit/debugger"
-				},
-				"flow": {
-					"$path": "kit/flow"
 				},
 				"hook": {
 					"$path": "kit/hook"
@@ -45,11 +34,11 @@
 				"strict": {
 					"$path": "kit/strict"
 				},
-				"view": {
-					"$path": "kit/view"
+				"task": {
+					"$path": "kit/task"
 				},
-				"when": {
-					"$path": "kit/when"
+				"userconfig": {
+					"$path": "kit/userconfig"
 				}
 			}
 		}

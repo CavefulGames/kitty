@@ -2,18 +2,18 @@
 
 --// dependencies
 local Strict = require(script.Parent.strict)
-local Context = {}
+local Task = {}
 
 local sleeping = {}
 local freeThreads: { thread } = {}
 
 --// properties
 local synchronized = Strict.Mutable(false)
-Context.synchronized = synchronized
+Task.synchronized = synchronized
 
 local function checkYieldSafe()
 	if synchronized() then
-		error("Not allowed to yield or wait while the current context is synchronized")
+		error("Not allowed to yield or wait while the current task is synchronized")
 	end
 end
 
@@ -53,11 +53,11 @@ function AsyncMetatable:__call(...)
 	end
 end
 
-function Context.Async<T...,U...>(f:(T...)->(U...)):AsyncFunction<T...,U...>
+function Task.Async<T...,U...>(f:(T...)->(U...)):AsyncFunction<T...,U...>
 	return setmetatable({_fn = f},AsyncMetatable)::AsyncFunction<T...,U...>
 end
 
-function Context.Sync<T...,U...>(f:(T...)->(U...)) --// to force synchronization and run the function, wrap it with the Sync
+function Task.Sync<T...,U...>(f:(T...)->(U...)) --// to force synchronization and run the function, wrap it with the Sync
 	return function(...)
 		synchronized(true)
 		f(...)
@@ -65,27 +65,19 @@ function Context.Sync<T...,U...>(f:(T...)->(U...)) --// to force synchronization
 	end
 end
 
-function Context.isAsync(obj:any):boolean
+function Task.isAsync(obj:any):boolean
 	return type(obj) == "table" and getmetatable(obj) == AsyncMetatable
 end
 
--- function Context.getGameTime()
--- 	return time()
--- end
+Task.getGameTime = time
+Task.getLuaTime = os.clock
+Task.getUTCTime = os.time
 
--- function Context.getLuaTime()
--- 	return os.clock()
--- end
-
--- function Context.getUTCTime()
--- 	return os.time()
--- end
-
-function Context.wakeUp(sleepId:any)
+function Task.wakeUp(sleepId:any)
 	sleeping[sleepId] = nil
 end
 
-function Context.sleep(sleepId:any,duration:number):(boolean,number) --// (didSleepWell,timePassed)
+function Task.sleep(sleepId:any,duration:number):(boolean,number) --// (didSleepWell,timePassed)
 	checkYieldSafe()
 	sleeping[sleepId] = true
 	local t = os.clock()
@@ -99,14 +91,14 @@ function Context.sleep(sleepId:any,duration:number):(boolean,number) --// (didSl
 	return success,os.clock()-t
 end
 
-function Context.yield(duration:number)
+function Task.yield(duration:number)
 	checkYieldSafe()
 	local t = os.clock()
 	while os.clock()-t < duration do end
 	return os.clock()-t
 end
 
-function Context.switch(value:any)
+function Task.switch(value:any)
 	return function(cases:{[any]:any,default:()->()?})
 		return (cases[value] or cases.default)()
 	end
@@ -114,13 +106,13 @@ end
 
 --// extending task library
 for k,v in task do
-	Context[k] = v
+	Task[k] = v
 end
 
 --// hooking task.wait
-function Context.wait(duration:number?):number --// since you are not allowed to use wait inside of Context.Sync
+function Task.wait(duration:number?):number --// since you are not allowed to use wait inside of Task.Sync
 	checkYieldSafe()
 	return task.wait(duration)
 end
 
-return Strict.Capsule(Context)::typeof(Context)&typeof(task)
+return Strict.Capsule(Task)::typeof(Task)&typeof(task)
