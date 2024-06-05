@@ -1,5 +1,5 @@
 [package]
-name = "dongd5ng/net"
+name = "caveful-games/net"
 version = "0.1.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
@@ -9,6 +9,6 @@ msgpack-luau = "cipharius/msgpack-luau@0.3.0"
 crc16 = "jiwonz/crc16@0.1.0"
 option = "lukadev-0/option@1.0.0"
 # kit
-hook = "jiwonz/hook@^0.1.0"
-debugger = "jiwonz/debugger@^0.1.0"
-strict = "jiwonz/strict@^0.1.0"
+hook = "caveful-games/hook@^0.1.0"
+debugger = "caveful-games/debugger@^0.1.0"
+strict = "caveful-games/strict@^0.1.0"

@@ -1,5 +1,5 @@
 [package]
-name = "jiwonz/task"
+name = "caveful-games/flow"
 version = "0.1.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
@@ -7,4 +7,5 @@ realm = "shared"
 [dependencies]
 promise = "lukadev-0/typed-promise@4.0.2"
 # kit
-strict = "jiwonz/strict@^0.1.0"
+strict = "caveful-games/strict@^0.1.0"
+debugger = "caveful-games/debugger@^0.1.0"

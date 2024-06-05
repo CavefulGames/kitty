@@ -6,42 +6,33 @@
 
 --// kit
 local Flow = require(script.Parent.flow)
-
-local synchronized = Flow.synchronized
+local Debugger = require(script.Parent.debugger)
 
 export type Connection = {
 	Binded: boolean,
 	Enabled: boolean,
 	Unbind: (self: Connection) -> (),
 	Rebind: (self: Connection) -> (),
-	[string]:any
+	[string]: any,
 }
 
 export type HookedEvent<T...> = {
 	RBXScriptConnection: RBXScriptConnection?,
 	RBXScriptSignal: RBXScriptSignal?,
 	Enabled: boolean,
-	LimitedToSynchronized: boolean,
 	Bind: (self: HookedEvent<T...>, fn: (T...) -> ()) -> Connection,
-	BindNamed: (self: HookedEvent<T...>, name:string, fn: (T...) -> ()) -> Connection,
+	BindNamed: (self: HookedEvent<T...>, name: string, fn: (T...) -> ()) -> Connection,
 	BindOnce: (self: HookedEvent<T...>, fn: (T...) -> ()) -> Connection,
-	BindOnceNamed: (self: HookedEvent<T...>, name:string, fn: (...any) -> ()) -> Connection,
+	BindOnceNamed: (self: HookedEvent<T...>, name: string, fn: (...any) -> ()) -> Connection,
 	Wait: (self: HookedEvent<T...>) -> T...,
 	Fire: (self: HookedEvent<T...>, T...) -> (),
 	UnbindAll: (self: HookedEvent<T...>) -> (),
-	UnbindNamed: (self: HookedEvent<T...>, name:string) -> (),
-	EnableNamed: (self: HookedEvent<T...>, name:string) -> (),
-	DisableNamed: (self: HookedEvent<T...>, name:string) -> (),
+	UnbindNamed: (self: HookedEvent<T...>, name: string) -> (),
+	EnableNamed: (self: HookedEvent<T...>, name: string) -> (),
+	DisableNamed: (self: HookedEvent<T...>, name: string) -> (),
 	Destroy: (self: HookedEvent<T...>) -> (),
-	[string]:any
+	[string]: any,
 }
-
-local function checkSyncLimitation<T...>(self:HookedEvent<T...>,fn:(T...)->()|Flow.AsyncFunction<T...>):never?
-	if self.LimitedToSynchronized and Flow.isAsync(fn) then
-		return error("While this event is limited to synchronized functions, tried to bind an AsyncFunction")
-	end
-	return
-end
 
 local Connection = {}
 Connection.__index = Connection
@@ -88,7 +79,7 @@ end
 Connection.Unbind = disconnect
 Connection.Rebind = reconnect
 
---\\ Signal //--
+--// signal
 local Signal = {}
 Signal.__index = Signal
 
@@ -102,8 +93,7 @@ local rbxConnect, rbxDisconnect do
 	end
 end
 
-local function connect<T...>(self: HookedEvent<T...>, fn: ((T...) -> ())|Flow.AsyncFunction<T...>): Connection
-	checkSyncLimitation(self,fn)
+local function connect<T...>(self: HookedEvent<T...>, fn: (T...) -> ()): Connection
 	local head = self._head
 	local cn = setmetatable({
 		Binded = true,
@@ -120,15 +110,14 @@ local function connect<T...>(self: HookedEvent<T...>, fn: ((T...) -> ())|Flow.As
 	end
 	self._head = cn
 
-	return cn::any
+	return cn :: any
 end
 
-local function once<T...>(self: HookedEvent<T...>, fn: (T...) -> ()|Flow.AsyncFunction<T...>)
-	checkSyncLimitation(self,fn)
+local function once<T...>(self: HookedEvent<T...>, fn: (T...) -> ())
 	local cn
-	cn = connect(self, function(...:T...)
+	cn = connect(self, function(...: T...)
 		disconnect(cn);
-		(fn::(T...)->())(...)
+		(fn :: (T...) -> ())(...)
 	end)
 	return cn
 end
@@ -149,9 +138,7 @@ local function fire<T...>(self: HookedEvent<T...>, ...: T...)
 	end
 	local cn = self._head
 	while cn do
-		synchronized(true)
 		cn._fn(...)
-		synchronized(false)
 		cn = cn._next
 	end
 end
@@ -173,7 +160,7 @@ local function destroy<T...>(self: HookedEvent<T...>)
 	end
 end
 
-local function named(self,name:string,cn: Connection<>)
+local function named(self, name: string, cn: Connection<>)
 	local cns = self.NamedConnections
 	if not cns then
 		cns = {}
@@ -185,36 +172,36 @@ local function named(self,name:string,cn: Connection<>)
 	cns[name] = cn
 end
 
---\\ Methods
+--\\ methods
 Signal.Bind = connect
-Signal.BindNamed = function(self,name:string,fn:(...any) -> ())
-	assert(type(name)=="string","Name for named binds must be a string")
-	named(self,name,connect(self,fn))
+Signal.BindNamed = function(self, name: string, fn: (...any) -> ())
+	assert(type(name) == "string", "Name for named binds must be a string")
+	named(self, name, connect(self, fn))
 end
 Signal.BindOnce = once
-Signal.BindOnceNamed = function(self,name:string,fn:(...any) -> ())
-	assert(type(name)=="string","Name for named binds must be a string")
-	named(self,name,once(self,fn))
+Signal.BindOnceNamed = function(self, name: string, fn: (...any) -> ())
+	assert(type(name) == "string", "Name for named binds must be a string")
+	named(self, name, once(self, fn))
 end
 Signal.Wait = wait
 Signal.Fire = fire
 Signal.UnbindAll = disconnectAll
-Signal.UnbindNamed = function(self,name:string)
-	assert(type(name)=="string","Name for named binds must be a string")
+Signal.UnbindNamed = function(self, name: string)
+	assert(type(name) == "string", "Name for named binds must be a string")
 	disconnect(self.NamedConnections[name])
 end
-Signal.EnableNamed = function(self,name:string)
-	assert(type(name)=="string","Name for named binds must be a string")
+Signal.EnableNamed = function(self, name: string)
+	assert(type(name) == "string", "Name for named binds must be a string")
 	self.NamedConnections[name].Enabled = true
 end
-Signal.DisableNamed = function(self,name:string)
-	assert(type(name)=="string","Name for named binds must be a string")
+Signal.DisableNamed = function(self, name: string)
+	assert(type(name) == "string", "Name for named binds must be a string")
 	self.NamedConnections[name].Enabled = false
 end
 Signal.Destroy = destroy
 
-return function(signal:RBXScriptSignal?):HookedEvent<...any>
-	local event = (setmetatable({ _head = false, Enabled = true }, Signal)::any)::HookedEvent<...any>
+return function(signal: RBXScriptSignal?): HookedEvent<...any>
+	local event = (setmetatable({ _head = false, Enabled = true }, Signal) :: any) :: HookedEvent<...any>
 	if signal ~= nil then
 		event.RBXScriptSignal = signal
 		if typeof(signal) == "RBXScriptSignal" then
@@ -227,5 +214,5 @@ return function(signal:RBXScriptSignal?):HookedEvent<...any>
 			end)
 		end
 	end
-	return event::HookedEvent<...any>
+	return event :: HookedEvent<...any>
 end

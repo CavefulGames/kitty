@@ -1,9 +1,9 @@
 [package]
-name = "jiwonz/strict"
+name = "caveful-games/strict"
 version = "0.1.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 
 [dependencies]
 # kit
-capsule = "jiwonz/capsule@^0.1.0"
+capsule = "caveful-games/capsule@^0.1.0"

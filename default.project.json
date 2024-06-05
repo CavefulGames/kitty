@@ -13,6 +13,9 @@
 				"debugger": {
 					"$path": "kit/debugger"
 				},
+				"flow": {
+					"$path": "kit/flow"
+				},
 				"hook": {
 					"$path": "kit/hook"
 				},
@@ -22,23 +25,23 @@
 				"input": {
 					"$path": "kit/input"
 				},
+				"kedi": {
+					"$path": "kit/kedi"
+				},
 				"net": {
 					"$path": "kit/net"
 				},
 				"physics": {
 					"$path": "kit/physics"
 				},
-				"react": {
-					"$path": "kit/react"
-				},
 				"strict": {
 					"$path": "kit/strict"
 				},
-				"task": {
-					"$path": "kit/task"
-				},
 				"userconfig": {
 					"$path": "kit/userconfig"
+				},
+				"when": {
+					"$path": "kit/when"
 				}
 			}
 		}

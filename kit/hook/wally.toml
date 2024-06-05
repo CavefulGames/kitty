@@ -1,9 +1,9 @@
 [package]
-name = "dongd5ng/hook"
+name = "caveful-games/hook"
 version = "0.1.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 
 [dependencies]
 # kit
-context = "jiwonz/flow@^0.1.0"
+context = "caveful-games/flow@^0.1.0"

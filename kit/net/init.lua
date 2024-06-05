@@ -16,27 +16,47 @@ local CRC16 = require(script.Parent.crc16)
 --// services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
 local isServer = RunService:IsServer()
 local outgoingBuffer: buffer
 local outgoingBufferUsed: number
 local outgoingBufferSize: number
 local outgoingBufferApos: number
-local outgoingInstances: { Instance } = {}
+local outgoingInstances: { Instance }
 local incomingBuffer: buffer
 local incomingBufferRead: number
 local incomingInstances: { Instance }
 local incomingInstancePos: number
-local booleanMap: { [any]: any } = {
-	[0] = false,
-	[1] = true,
-	[false] = 0,
-	[true] = 1,
-}
+local reliableRemoteEvent: RemoteEvent
+local unreliableRemoteEvent: UnreliableRemoteEvent
+local packetId = 1
+local packetNames = {}
+local events = {}
+local writingDebuggerWarned = false
 
-Net.orderedInstanceReading = Strict.Mutable(false)
+local EXECEPTION_OUT_OF_RANGE = "Literal out of range for '%s'"
+local EXECEPTION_NEGATIVE_NUMBER = "Cannot apply unary operator '-' to type '%s'"
+local EXECEPTION_FLOATING_NUMBER = "Expected '%s', found floating-point number"
 
-local function initializeBuffer()
+local function fetchRemoteEvents()
+	reliableRemoteEvent = ReplicatedStorage:WaitForChild("KITTY_NET_RELIABLE") :: any
+	unreliableRemoteEvent = ReplicatedStorage:WaitForChild("KITTY_NET_UNRELIABLE") :: any
+end
+
+local function load(data: {
+	buff: buffer,
+	used: number,
+	size: number,
+	inst: { Instance },
+})
+	outgoingBuffer = data.buff
+	outgoingBufferUsed = data.used
+	outgoingBufferSize = data.size
+	outgoingInstances = data.inst
+end
+
+local function loadEmpty()
 	outgoingBufferSize = 64
 	outgoingBufferUsed = 0
 	outgoingBuffer = buffer.create(64)
@@ -55,8 +75,8 @@ local function allocate(size: number)
 		outgoingBuffer = new_buff
 	end
 
-	local offset = outgoingBufferUsed
-	outgoingBufferUsed = outgoingBufferUsed + size
+	outgoingBufferApos = outgoingBufferUsed
+	outgoingBufferUsed += size
 end
 
 local function read(size: number): number
@@ -119,15 +139,86 @@ else
 	end
 end
 
-function Net.PacketProvider()
+local playerMap = {}
 
+local function loadPlayer(player: Player)
+	if playerMap[player] then
+		load(playerMap[player])
+	else
+		loadEmpty()
+	end
 end
 
-function Net.Packet()
+Players.PlayerRemoving:Connect(function(player)
+	playerMap[player] = nil
+end)
 
-end
+type BasePacket<T, P> = {
+	onReceive: {
+		Bind: (self: any, callback:(T)->())->()
+	}
+} & P
+
+type PacketSendableFromServer<T> = {
+	sendTo: (player: Player, data: T)->();
+}
+type PacketSendableFromClient<T> = {
+	sendToServer: (data: T)->();
+}
+
+Net.Packet = (function<T>(config: {
+	from: "server" | "client",
+	reliable: boolean,
+	struct: { [string]: T }
+})
+	local packet = {}
+	local from = config.from
+	local reliable = config.reliable
+	local struct = config.struct
+
+	if isServer and from == "server" then
+		local writers = {}
+		for _, v in struct do
+
+		end
+
+		packet.sendTo = function(player: Player, data: T)
+			if type(data) ~= "table" then
+				error(Strict.ExpectException(data, "table"))
+			end
+			loadEmpty()
+			for k, v in data do
+				writers[k](v)
+			end
+		end
+	elseif not isServer and from == "client" then
+		local writers = {}
+		packet.sendToServer = function(data: T)
+
+		end
+	else
+		local readers = {}
+		packet.onReceive = Hook() :: Hook.HookedEvent<T>
+	end
+
+	packetId += 1
+
+	return packet
+end :: any) :: (<T>(config: {
+	from: "client",
+	reliable: boolean,
+	struct: { [string]: T }
+}) -> BasePacket<T, PacketSendableFromClient<T>>) & (<T>(packet: {
+	from: "client",
+	reliable: boolean,
+	struct: { [string]: T }
+}) -> BasePacket<T, PacketSendableFromServer<T>>)
 
 function Net.RawPacket()
+
+end
+
+function Net.PacketProvider()
 
 end
 
@@ -144,7 +235,17 @@ local u8R, u8W =
 	function(): number
 		return buffer.readu8(incomingBuffer, read(1))
 	end, function(value: number)
-		outgoingBufferApos = allocate(1)
+		if Debugger.enabled() then
+			local t = "u8"
+			if value > 2^8-1 then
+				Debugger.warn(EXECEPTION_OUT_OF_RANGE:format(t))
+			elseif value < 0 then
+				Debugger.warn(EXECEPTION_NEGATIVE_NUMBER:format(t))
+			elseif value % 1 ~= 0 then
+				Debugger.warn(EXECEPTION_FLOATING_NUMBER:format(t))
+			end
+		end
+		allocate(1)
 		buffer.writeu8(outgoingBuffer, outgoingBufferApos, value)
 	end
 export type UInt8 = {}
@@ -154,7 +255,16 @@ local u16R, u16W =
 	function(): number
 		return buffer.readu16(incomingBuffer, read(2))
 	end, function(value: number)
-		outgoingBufferApos = allocate(2)
+		if Debugger.enabled() then
+			if value > 2^16-1 then
+				Debugger.warn("Literal out of range for 'u16'")
+			elseif value < 0 then
+				Debugger.warn("Cannot apply unary operator '-' to type 'u16'")
+			elseif value % 1 ~= 0 then
+				Debugger.warn("Expected 'u16', found floating-point number")
+			end
+		end
+		allocate(2)
 		buffer.writeu16(outgoingBuffer, outgoingBufferApos, value)
 	end
 export type UInt16 = {}
@@ -165,7 +275,16 @@ local u32R, u32W =
 		return buffer.readu32(incomingBuffer, read(4))
 	end,
 	function(value: number)
-		outgoingBufferApos = allocate(4)
+		if Debugger.enabled() then
+			if value > 2^32-1 then
+				Debugger.warn("Literal out of range for 'u32'")
+			elseif value < 0 then
+				Debugger.warn("Cannot apply unary operator '-' to type 'u32'")
+			elseif value % 1 ~= 0 then
+				Debugger.warn("Expected 'u32', found floating-point number")
+			end
+		end
+		allocate(4)
 		buffer.writeu32(outgoingBuffer, outgoingBufferApos, value)
 	end
 export type UInt32 = {}
@@ -175,7 +294,14 @@ local i8R, i8W =
 	function(): number
 		return buffer.readi8(incomingBuffer, read(1))
 	end, function(value: number)
-		outgoingBufferApos = allocate(1)
+		if Debugger.enabled() then
+			if value > 2^7-1 or value < -2^7 then
+				Debugger.warn("Literal out of range for 'i8'")
+			elseif value % 1 ~= 0 then
+				Debugger.warn("Expected 'i8', found floating-point number")
+			end
+		end
+		allocate(1)
 		buffer.writei8(outgoingBuffer, outgoingBufferApos, value)
 	end
 export type Int8 = {}
@@ -185,7 +311,14 @@ local i16R, i16W =
 	function(): number
 		return buffer.readi16(incomingBuffer, read(2))
 	end, function(value: number)
-		outgoingBufferApos = allocate(2)
+		if Debugger.enabled() then
+			if value > 2^15-1 or value < -2^15 then
+				Debugger.warn("Literal out of range for 'i16'")
+			elseif value % 1 ~= 0 then
+				Debugger.warn("Expected 'i8', found floating-point number")
+			end
+		end
+		allocate(2)
 		buffer.writei16(outgoingBuffer, outgoingBufferApos, value)
 	end
 export type Int16 = {}
@@ -235,11 +368,11 @@ Net.String = (({ stringR, stringW } :: RW) :: any) :: string
 
 local boolR, boolW =
 	function(): boolean
-		return booleanMap[buffer.readu8(incomingBuffer, read(1))]
+		return buffer.readu8(incomingBuffer, read(1)) == 0
 	end,
 	function(value: boolean)
 		outgoingBufferApos = allocate(1)
-		buffer.writeu8(outgoingBuffer, outgoingBufferApos, booleanMap[value])
+		buffer.writeu8(outgoingBuffer, outgoingBufferApos, if value then 1 else 0)
 	end
 Net.Boolean = (({ boolR, boolW } :: RW) :: any) :: boolean
 
@@ -476,5 +609,6 @@ Net.Enum = (setmetatable(enumRWs, {
 }) :: any) :: typeof(Enum)
 
 initializeBuffer()
+fetchRemoteEvents()
 
 return Strict.Capsule(Net)

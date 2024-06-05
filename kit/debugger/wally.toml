@@ -1,9 +1,9 @@
 [package]
-name = "dongd5ng/debugger"
+name = "caveful-games/debugger"
 version = "0.1.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 
 [dependencies]
 # kit
-strict = "jiwonz/strict@^0.1.0"
+strict = "caveful-games/strict@^0.1.0"
