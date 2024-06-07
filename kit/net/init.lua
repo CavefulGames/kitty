@@ -153,79 +153,6 @@ Players.PlayerRemoving:Connect(function(player)
 	playerMap[player] = nil
 end)
 
-type BasePacket<T, P> = {
-	onReceive: {
-		Bind: (self: any, callback:(T)->())->()
-	}
-} & P
-
-type PacketSendableFromServer<T> = {
-	sendTo: (player: Player, data: T)->();
-}
-type PacketSendableFromClient<T> = {
-	sendToServer: (data: T)->();
-}
-
-Net.Packet = (function<T>(config: {
-	from: "server" | "client",
-	reliable: boolean,
-	struct: { [string]: T }
-})
-	local packet = {}
-	local from = config.from
-	local reliable = config.reliable
-	local struct = config.struct
-
-	if isServer and from == "server" then
-		local writers = {}
-		for _, v in struct do
-
-		end
-
-		packet.sendTo = function(player: Player, data: T)
-			if type(data) ~= "table" then
-				error(Strict.ExpectException(data, "table"))
-			end
-			loadEmpty()
-			for k, v in data do
-				writers[k](v)
-			end
-		end
-	elseif not isServer and from == "client" then
-		local writers = {}
-		packet.sendToServer = function(data: T)
-
-		end
-	else
-		local readers = {}
-		packet.onReceive = Hook() :: Hook.HookedEvent<T>
-	end
-
-	packetId += 1
-
-	return packet
-end :: any) :: (<T>(config: {
-	from: "client",
-	reliable: boolean,
-	struct: { [string]: T }
-}) -> BasePacket<T, PacketSendableFromClient<T>>) & (<T>(packet: {
-	from: "client",
-	reliable: boolean,
-	struct: { [string]: T }
-}) -> BasePacket<T, PacketSendableFromServer<T>>)
-
-function Net.RawPacket()
-
-end
-
-function Net.PacketProvider()
-
-end
-
-function Net.RemoteStruct()
-
-end
-
 -- write (buffer, offset, value)
 -- read (buffer, offset)
 
@@ -607,6 +534,86 @@ Net.Enum = (setmetatable(enumRWs, {
 		rawset(enumRWs, k, {R, W} :: RW)
 	end
 }) :: any) :: typeof(Enum)
+
+type BasePacket<T, P> = {
+	onReceive: {
+		Bind: (self: any, callback:(T)->())->()
+	}
+} & P
+
+type PacketSendableFromServer<T> = {
+	sendTo: (player: Player, data: T)->();
+}
+type PacketSendableFromClient<T> = {
+	sendToServer: (data: T)->();
+}
+
+Net.Packet = (function<T>(config: {
+	from: "server" | "client",
+	reliable: boolean,
+	struct: T & { [string]: any }
+})
+	local packet = {} :: any
+	local from = config.from
+	local reliable = config.reliable
+	local struct = config.struct
+
+	if from ~= "server" and from ~= "client" then
+		error(`Packet config 'from' expected 'server' or 'client' got {from}`)
+	end
+	Strict.expect(reliable, "boolean")
+	if type(struct) ~= "table" then
+		error(Strict.ExpectException(struct, "table"))
+	end
+
+	if isServer and from == "server" then
+		local writers = {}
+		for _, v in struct do
+			table.insert(writers, v[2])
+		end
+
+		packet.sendTo = function(player: Player, data: T)
+			if type(data) ~= "table" then
+				error(Strict.ExpectException(data, "table"))
+			end
+			loadEmpty()
+			u8W(packet._id)
+			for k, v in data do
+				writers[k](v)
+			end
+		end
+	elseif not isServer and from == "client" then
+		local writers = {}
+		packet.sendToServer = function(data: T)
+
+		end
+	else
+		local readers = {}
+		packet.onReceive = Hook() :: Hook.HookedEvent<T>
+	end
+
+	return packet
+end :: any) :: (<T>(config: {
+	from: "client",
+	reliable: boolean,
+	struct: T & { [string]: any }
+}) -> BasePacket<T, PacketSendableFromClient<T>>) & (<T>(packet: {
+	from: "client",
+	reliable: boolean,
+	struct: T & { [string]: any }
+}) -> BasePacket<T, PacketSendableFromServer<T>>)
+
+function Net.RawPacket()
+
+end
+
+function Net.PacketProvider()
+
+end
+
+function Net.RemoteStruct()
+
+end
 
 initializeBuffer()
 fetchRemoteEvents()

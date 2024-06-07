@@ -2,8 +2,8 @@
 	"name": "kitty-dev",
 	"tree":	{
 		"$className": "DataModel",
-		"ServerScriptService": {
-			"$className": "ServerScriptService",
+		"ReplicatedStorage": {
+			"$className": "ReplicatedStorage",
 			"packages": {
 				"$path": "Packages",
 				"bricklayer": {
