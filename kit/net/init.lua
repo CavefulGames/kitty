@@ -536,9 +536,7 @@ Net.Enum = (setmetatable(enumRWs, {
 }) :: any) :: typeof(Enum)
 
 type BasePacket<T, P> = {
-	onReceive: {
-		Bind: (self: any, callback:(T)->())->()
-	}
+	onReceive: Hook.HookedEvent<T>
 } & P
 
 type PacketSendableFromServer<T> = {
@@ -557,6 +555,7 @@ Net.Packet = (function<T>(config: {
 	local from = config.from
 	local reliable = config.reliable
 	local struct = config.struct
+	local packetId: number
 
 	if from ~= "server" and from ~= "client" then
 		error(`Packet config 'from' expected 'server' or 'client' got {from}`)
@@ -568,8 +567,8 @@ Net.Packet = (function<T>(config: {
 
 	if isServer and from == "server" then
 		local writers = {}
-		for _, v in struct do
-			table.insert(writers, v[2])
+		for k, v in struct do
+			writers[k] = v[2]
 		end
 
 		packet.sendTo = function(player: Player, data: T)
@@ -577,7 +576,7 @@ Net.Packet = (function<T>(config: {
 				error(Strict.ExpectException(data, "table"))
 			end
 			loadEmpty()
-			u8W(packet._id)
+			u8W(packetId)
 			for k, v in data do
 				writers[k](v)
 			end
@@ -592,24 +591,42 @@ Net.Packet = (function<T>(config: {
 		packet.onReceive = Hook() :: Hook.HookedEvent<T>
 	end
 
-	return packet
+	packet._init = function(id: number) --// used internally with packet interface
+		if packetId then
+			error("This packet already has been initialized!")
+		end
+		packetId = id
+	end
+
+	return table.freeze(packet)
 end :: any) :: (<T>(config: {
 	from: "client",
 	reliable: boolean,
-	struct: T & { [string]: any }
+	struct: T
 }) -> BasePacket<T, PacketSendableFromClient<T>>) & (<T>(packet: {
-	from: "client",
+	from: "server",
 	reliable: boolean,
-	struct: T & { [string]: any }
+	struct: T
 }) -> BasePacket<T, PacketSendableFromServer<T>>)
 
 function Net.RawPacket()
 
 end
 
-function Net.PacketProvider()
-
-end
+Net.PacketInterface = (function<T>(packetInterface: T & {[string]: BasePacket<any, any>})
+	if type(packetInterface) ~= "table" then
+		error(Strict.ExpectException(packetInterface, "table"))
+	end
+	local packets = {}
+	for names, packet in packetInterface do
+		packet._init(#packets)
+		table.insert(packets, packet)
+	end
+end :: any) :: (<T>(packetInterface: T & { [string]: BasePacket<any, PacketSendableFromClient<any>> }) -> ({
+	server: { [string]: { sendToServer: nil } } & T, client: { [string]: { sendTo: nil, onReceive: nil } } & T
+})) & (<T>(packetInterface: T & { [string]: BasePacket<any, PacketSendableFromServer<any>> }) -> ({
+	server: { [string]: { sendToServer: nil, onReceive: nil } } & T, client: { [string]: { sendTo: nil } } & T
+}))
 
 function Net.RemoteStruct()
 
