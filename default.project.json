@@ -1,5 +1,6 @@
 {
 	"name": "kitty-dev",
+	"globIgnorePaths": ["**/*.txt"],
 	"tree":	{
 		"$className": "DataModel",
 		"ReplicatedStorage": {

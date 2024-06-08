@@ -6,3 +6,4 @@ realm = "shared"
 
 [dependencies]
 strict = "caveful-games/strict@^0.1.0"
+reactlua = "jsdotlua/react@17.1.0"
