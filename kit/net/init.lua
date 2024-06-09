@@ -2,22 +2,23 @@
 
 --// inspired by bytenet and zap
 
---// kit
+--// #Kit
 local Hook = require(script.Parent.hook)
 local Debugger = require(script.Parent.debugger)
 local Strict = require(script.Parent.strict)
 local Net = {}
 
---// packages
+--// #Packages
 local MsgPack = require(script.Parent["msgpack-luau"])
 local Promise = require(script.Parent.promise)
 local CRC16 = require(script.Parent.crc16)
 
---// services
+--// #Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
+--// #PrivateVariables
 local isServer = RunService:IsServer()
 local outgoingBuffer: buffer
 local outgoingBufferUsed: number
@@ -35,13 +36,25 @@ local packetNames = {}
 local events = {}
 local writingDebuggerWarned = false
 
+--// #Constants
 local EXECEPTION_OUT_OF_RANGE = "Literal out of range for '%s'"
 local EXECEPTION_NEGATIVE_NUMBER = "Cannot apply unary operator '-' to type '%s'"
 local EXECEPTION_FLOATING_NUMBER = "Expected '%s', found floating-point number"
 
+--// #PrivateFunctions
+
 local function fetchRemoteEvents()
-	reliableRemoteEvent = ReplicatedStorage:WaitForChild("KITTY_NET_RELIABLE") :: any
-	unreliableRemoteEvent = ReplicatedStorage:WaitForChild("KITTY_NET_UNRELIABLE") :: any
+	if isServer then
+		reliableRemoteEvent = Instance.new("RemoteEvent")
+		reliableRemoteEvent.Name = "ReliableRemoteEvent"
+		reliableRemoteEvent.Parent = script
+		unreliableRemoteEvent = Instance.new("UnreliableRemoteEvent")
+		unreliableRemoteEvent.Name = "UnreliableRemoteEvent"
+		unreliableRemoteEvent.Parent = script
+	else
+		reliableRemoteEvent = script:WaitForChild("ReliableRemoteEvent", 10) :: any
+		unreliableRemoteEvent = script:WaitForChild("UnreliableRemoteEvent", 10) :: any
+	end
 end
 
 local function load(data: {
@@ -54,6 +67,15 @@ local function load(data: {
 	outgoingBufferUsed = data.used
 	outgoingBufferSize = data.size
 	outgoingInstances = data.inst
+end
+
+local function save()
+	return {
+		buff = outgoingBuffer,
+		used = outgoingBufferUsed,
+		size = outgoingBufferSize,
+		inst = outgoingInstances,
+	}
 end
 
 local function loadEmpty()
@@ -139,7 +161,12 @@ else
 	end
 end
 
-local playerMap = {}
+local playerMap: { [Player]: {
+	buff: buffer,
+	inst: { Instance },
+	size: number,
+	used: number
+} } = {}
 
 local function loadPlayer(player: Player)
 	if playerMap[player] then
@@ -149,9 +176,29 @@ local function loadPlayer(player: Player)
 	end
 end
 
+--// #Events
+
 Players.PlayerRemoving:Connect(function(player)
 	playerMap[player] = nil
 end)
+
+RunService.Heartbeat:Connect(function()
+	for player, outgoing in playerMap do
+		if outgoing.used > 0 then
+			local buff = buffer.create(outgoing.used)
+			buffer.copy(buff, 0, outgoing.buff, 0, outgoing.used)
+
+			reliableRemoteEvent:FireClient(player, buff, outgoing.inst)
+
+			outgoing.buff = buffer.create(64)
+			outgoing.used = 0
+			outgoing.size = 64
+			table.clear(outgoing.inst)
+		end
+	end
+end)
+
+--// #SerDes #Fields
 
 -- write (buffer, offset, value)
 -- read (buffer, offset)
@@ -535,6 +582,8 @@ Net.Enum = (setmetatable(enumRWs, {
 	end
 }) :: any) :: typeof(Enum)
 
+--// #PublicFunctions
+
 type BasePacket<T, P> = {
 	onReceive: Hook.HookedEvent<T>
 } & P
@@ -571,6 +620,19 @@ Net.Packet = (function<T>(config: {
 			writers[k] = v[2]
 		end
 
+		local send: (player: Player) -> ()
+		if reliable then
+			send = function(player)
+				playerMap[player] = save()
+			end
+		else
+			send = function(player)
+				local buff = buffer.create(outgoingBufferUsed)
+				buffer.copy(buff, 0, outgoingBuffer, 0, outgoingBufferUsed)
+				unreliableRemoteEvent:FireClient(player, buff, outgoingInstances)
+			end
+		end
+
 		packet.sendTo = function(player: Player, data: T)
 			if type(data) ~= "table" then
 				error(Strict.ExpectException(data, "table"))
@@ -580,6 +642,7 @@ Net.Packet = (function<T>(config: {
 			for k, v in data do
 				writers[k](v)
 			end
+			send(player) --// need benchmark: using upvalue is cheaper or using if is cheaper
 		end
 	elseif not isServer and from == "client" then
 		local writers = {}
@@ -632,7 +695,7 @@ function Net.RemoteStruct()
 
 end
 
-initializeBuffer()
+loadEmpty()
 fetchRemoteEvents()
 
 return Strict.Capsule(Net)
