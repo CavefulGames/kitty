@@ -6,9 +6,25 @@ local errorLevel = 2
 
 export type BasicTypes = "string" | "number" | "boolean" | "table" | "function" | string
 
+--[=[
+	@class Tuple
+	튜플 형식으로 Strict 런타임 타입 체크를 하기 위한 클래스
+]=]
 local Tuple = {}
 Tuple.__index = Tuple
 
+--[=[
+	튜플에서 값을 예상합니다.
+	```lua
+	local function foo(a: number, b: string)
+		Strict.Tuple()
+		:expect(a, "number") -- Bad tuple index #1: number expected, got string
+		:expect(b, "string")
+	end
+
+	foo("wrong type", "correct type")
+	```
+]=]
 function Tuple:expect<T>(value: T, typeName: BasicTypes?)
 	--error message example: Bad tuple index #1: string expected, got nil
 	errorLevel = 3
@@ -18,6 +34,9 @@ function Tuple:expect<T>(value: T, typeName: BasicTypes?)
 	return self
 end
 
+--[=[
+	튜플에서 선택적 값으로 예상합니다.
+]=]
 function Tuple:expectOptional<T>(value: T, typeName: BasicTypes)
 	errorLevel = 3
 	Strict.expectOptional(value, typeName, "Bad tuple index #", self.index, ":")

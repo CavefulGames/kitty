@@ -32,6 +32,7 @@ local incomingInstances: { Instance }
 local incomingInstancePos: number
 local reliableRemoteEvent: RemoteEvent
 local unreliableRemoteEvent: UnreliableRemoteEvent
+local remoteFunction: RemoteFunction
 local packetId = 1
 local packetNames = {}
 local events = {}
@@ -91,7 +92,7 @@ local function loadEmpty()
 	outgoingInstances = {}
 end
 
-local function allocate(size: number)
+local function reserve(size: number)
 	if outgoingBufferUsed + size > outgoingBufferSize then
 		while outgoingBufferUsed + size > outgoingBufferSize do
 			outgoingBufferSize = outgoingBufferSize * 2
@@ -174,6 +175,7 @@ end
 --// write (buffer, offset, value)
 --// read (buffer, offset)
 type RW = { [number]: (value: any) -> any }
+type AdvancedPrimitiveNumber = { value: number, callback: () -> ()?, doClamp: boolean?, lastSentServerTime: number?, lastWrote: string?, timeTakenToWrite: number?, doRecord: boolean? }
 
 local u8R, u8W =
 	function(): number
@@ -189,14 +191,14 @@ local u8R, u8W =
 				Debugger.warn(EXECEPTION_FLOATING_NUMBER:format(t))
 			end
 		end
-		allocate(1)
+		reserve(1)
 		buffer.writeu8(outgoingBuffer, outgoingBufferApos, value)
 	end
-export type UInt8 = {}
---- @prop UInt8 number
+export type u8 = AdvancedPrimitiveNumber
+--- @prop u8 number
 --- @within Net
 --- 부호 없는 8비트 정수
-Net.UInt8 = (({ u8R, u8W } :: RW) :: any) :: number | UInt8
+Net.u8 = (({ u8R, u8W } :: RW) :: any) :: number | u8
 
 local u16R, u16W =
 	function(): number
@@ -211,14 +213,14 @@ local u16R, u16W =
 				Debugger.warn("Expected 'u16', found floating-point number")
 			end
 		end
-		allocate(2)
+		reserve(2)
 		buffer.writeu16(outgoingBuffer, outgoingBufferApos, value)
 	end
-export type UInt16 = {}
---- @prop UInt16 number
+export type u16 = AdvancedPrimitiveNumber
+--- @prop u16 number
 --- @within Net
 --- 부호 없는 16비트 정수
-Net.UInt16 = (({ u16R, u16W } :: RW ) :: any) :: number | UInt16
+Net.u16 = (({ u16R, u16W } :: RW ) :: any) :: number | u16
 
 local u32R, u32W =
 	function(): number
@@ -234,14 +236,14 @@ local u32R, u32W =
 				Debugger.warn("Expected 'u32', found floating-point number")
 			end
 		end
-		allocate(4)
+		reserve(4)
 		buffer.writeu32(outgoingBuffer, outgoingBufferApos, value)
 	end
-export type UInt32 = {}
---- @prop UInt32 number
+export type u32 = AdvancedPrimitiveNumber
+--- @prop u32 number
 --- @within Net
 --- 부호 없는 32비트 정수
-Net.UInt32 = (({ u32R, u32W } :: RW ) :: any) :: number | UInt32
+Net.u32 = (({ u32R, u32W } :: RW ) :: any) :: number | u32
 
 local i8R, i8W =
 	function(): number
@@ -254,14 +256,14 @@ local i8R, i8W =
 				Debugger.warn("Expected 'i8', found floating-point number")
 			end
 		end
-		allocate(1)
+		reserve(1)
 		buffer.writei8(outgoingBuffer, outgoingBufferApos, value)
 	end
-export type Int8 = {}
---- @prop Int8 number
+export type i8 = AdvancedPrimitiveNumber
+--- @prop i8 number
 --- @within Net
 --- 8비트 정수
-Net.Int8 = (({ i8R, i8W } :: RW) :: any) :: number | Int8
+Net.i8 = (({ i8R, i8W } :: RW) :: any) :: number | i8
 
 local i16R, i16W =
 	function(): number
@@ -274,53 +276,53 @@ local i16R, i16W =
 				Debugger.warn("Expected 'i8', found floating-point number")
 			end
 		end
-		allocate(2)
+		reserve(2)
 		buffer.writei16(outgoingBuffer, outgoingBufferApos, value)
 	end
-export type Int16 = {}
---- @prop Int16 number
+export type i16 = AdvancedPrimitiveNumber
+--- @prop i16 number
 --- @within Net
 --- 16비트 정수
-Net.Int16 = (({ i16R, i16W } :: RW) :: any) :: number | Int16
+Net.i16 = (({ i16R, i16W } :: RW) :: any) :: number | i16
 
 local i32R, i32W =
 	function(): number
 		return buffer.readi32(incomingBuffer, read(4))
 	end, function(value: number)
-		outgoingBufferApos = allocate(4)
+		outgoingBufferApos = reserve(4)
 		buffer.writei32(outgoingBuffer, outgoingBufferApos, value)
 	end
-export type Int32 = {}
---- @prop Int32 number
+export type i32 = AdvancedPrimitiveNumber
+--- @prop i32 number
 --- @within Net
 --- 32비트 정수
-Net.Int32 = (({ i32R, i32W } :: RW) :: any) :: number | Int32
+Net.i32 = (({ i32R, i32W } :: RW) :: any) :: number | i32
 
 local f32R, f32W =
 	function(): number
 		return buffer.readf32(incomingBuffer, read(4))
 	end, function(value: number)
-		outgoingBufferApos = allocate(4)
+		outgoingBufferApos = reserve(4)
 		buffer.writef32(outgoingBuffer, outgoingBufferApos, value)
 	end
-export type Float32 = {}
---- @prop Float32 number
+export type f32 = AdvancedPrimitiveNumber
+--- @prop f32 number
 --- @within Net
 --- 32비트 표준 부동소수점
-Net.Float32 = (({ f32R, f32W } :: RW) :: any) :: number | Float32
+Net.f32 = (({ f32R, f32W } :: RW) :: any) :: number | f32
 
 local f64R, f64W =
 	function(): number
 		return buffer.readf64(incomingBuffer, read(8))
 	end, function(value: number)
-		outgoingBufferApos = allocate(8)
+		outgoingBufferApos = reserve(8)
 		buffer.writef64(outgoingBuffer, outgoingBufferApos, value)
 	end
-export type Float64 = {}
---- @prop Float64 number
+export type f64 = AdvancedPrimitiveNumber
+--- @prop f64 number
 --- @within Net
 --- 64비트 표준 부동소수점
-Net.Float64 = (({ f64R, f64W } :: RW) :: any) :: number | Float64
+Net.f64 = (({ f64R, f64W } :: RW) :: any) :: number | f64
 
 local stringR, stringW =
 	function(): string
@@ -328,27 +330,27 @@ local stringR, stringW =
 		return buffer.readstring(incomingBuffer, read(length), length)
 	end, function(value: string)
 		local length = #value
-		outgoingBufferApos = allocate(2)
+		outgoingBufferApos = reserve(2)
 		buffer.writeu16(outgoingBuffer, outgoingBufferApos, length)
 		buffer.writestring(outgoingBuffer, length, value)
 	end
---- @prop String string
+--- @prop string string
 --- @within Net
 --- 부호 없는 16비트 정수의 최대 길이만큼의 길이를 가질 수 있는 문자열
-Net.String = (({ stringR, stringW } :: RW) :: any) :: string
+Net.string = (({ stringR, stringW } :: RW) :: any) :: string
 
 local boolR, boolW =
 	function(): boolean
 		return buffer.readu8(incomingBuffer, read(1)) == 0
 	end,
 	function(value: boolean)
-		outgoingBufferApos = allocate(1)
+		outgoingBufferApos = reserve(1)
 		buffer.writeu8(outgoingBuffer, outgoingBufferApos, if value then 1 else 0)
 	end
---- @prop Boolean boolean
+--- @prop boolean boolean
 --- @within Net
---- 8비트 불리언
-Net.Boolean = (({ boolR, boolW } :: RW) :: any) :: boolean
+--- 8비트를 사용하는 불리언
+Net.boolean = (({ boolR, boolW } :: RW) :: any) :: boolean
 
 local tableR, tableW =
 	function(): { [any]: any }
@@ -357,11 +359,11 @@ local tableR, tableW =
 	function(value: { [any]: any })
 		stringW(MsgPack.encode(value))
 	end
---- @prop Table { [any]: any }
+--- @prop table { [any]: any }
 --- @within Net
 --- MessagePack으로 인코딩된 테이블
 --- 타입 케스팅을 통해 테이블 타입체킹을 할 수 있습니다.
-Net.Table = ({ tableR, tableW } :: RW) :: { [any]: any }
+Net.table = ({ tableR, tableW } :: RW) :: { [any]: any }
 
 local charR, charW =
 	function(): string
@@ -369,11 +371,10 @@ local charR, charW =
 	end, function(value: string)
 		u8W(string.byte(value))
 	end
-type Char = {}
---- @prop Char string
+--- @prop char string
 --- @within Net
 --- 8비트 한 자리 문자
-Net.Char = (({ charR, charW } :: RW) :: any) :: string | Char
+Net.char = (({ charR, charW } :: RW) :: any) :: string
 
 local bufferR, bufferW =
 	function(): buffer
@@ -381,10 +382,10 @@ local bufferR, bufferW =
 	end, function(value: buffer)
 		stringW(buffer.tostring(value))
 	end
---- @prop Buffer buffer
+--- @prop buffer buffer
 --- @within Net
 --- Luau buffer 데이터 타입
-Net.Buffer = (({ bufferR, bufferW } :: RW) :: any) :: buffer
+Net.buffer = (({ bufferR, bufferW } :: RW) :: any) :: buffer
 
 local vector3R, vector3W =
 	function(): Vector3
@@ -394,10 +395,10 @@ local vector3R, vector3W =
 		f32W(value.Y)
 		f32W(value.Z)
 	end
---- @prop Vector3 Vector3
+--- @prop vector3 Vector3
 --- @within Net
 --- 32비트 표준 부동소수점으로 구성된 3차원 벡터 데이터 타입
-Net.Vector3 = (({ vector3R, vector3W } :: RW) :: any) :: Vector3
+Net.vector3 = (({ vector3R, vector3W } :: RW) :: any) :: Vector3
 
 local vector3int16R, vector3int16W =
 	function(): Vector3int16
@@ -407,10 +408,10 @@ local vector3int16R, vector3int16W =
 		i16W(value.Y)
 		i16W(value.Z)
 	end
---- @prop Vector3int16 Vector3int16
+--- @prop vector3int16 Vector3int16
 --- @within Net
 --- 16비트 정수로 구성된 3차원 벡터 데이터 타입
-Net.Vector3int16 = (({ vector3int16R, vector3int16W } :: RW) :: any) :: Vector3int16
+Net.vector3int16 = (({ vector3int16R, vector3int16W } :: RW) :: any) :: Vector3int16
 
 local vector2R, vector2W =
 	function(): Vector2
@@ -419,10 +420,10 @@ local vector2R, vector2W =
 		f32W(value.X)
 		f32W(value.Y)
 	end
---- @prop Vector2 Vector2
+--- @prop vector2 Vector2
 --- @within Net
 --- 32비트 표준 부동소수점으로 구성된 2차원 벡터 데이터 타입
-Net.Vector2 = (({ vector2R, vector2W } :: RW) :: any) :: Vector2
+Net.vector2 = (({ vector2R, vector2W } :: RW) :: any) :: Vector2
 
 local vector2int16R, vector2int16W =
 	function(): Vector2int16
@@ -431,10 +432,10 @@ local vector2int16R, vector2int16W =
 		i16W(value.X)
 		i16W(value.Y)
 	end
---- @prop Vector2int16 Vector2int16
+--- @prop vector2int16 Vector2int16
 --- @within Net
 --- 16비트 정수로 구성된 2차원 벡터 데이터 타입
-Net.Vector2int16 = (({ vector2int16R, vector2int16W } :: RW) :: any) :: Vector2int16
+Net.vector2int16 = (({ vector2int16R, vector2int16W } :: RW) :: any) :: Vector2int16
 
 local udimR, udimW =
 	function(): UDim
@@ -444,10 +445,10 @@ local udimR, udimW =
 		f32W(value.Scale)
 		i32W(value.Offset)
 	end
---- @prop UDim UDim
+--- @prop udim UDim
 --- @within Net
 --- UDim 데이터 타입
-Net.UDim = (({ udimR, udimW } :: RW) :: any) :: UDim
+Net.udim = (({ udimR, udimW } :: RW) :: any) :: UDim
 
 local udim2R, udim2W =
 	function(): UDim2
@@ -456,10 +457,10 @@ local udim2R, udim2W =
 		udimW(value.X)
 		udimW(value.Y)
 	end
---- @prop UDim2 UDim2
+--- @prop udim2 UDim2
 --- @within Net
 --- UDim2 데이터 타입
-Net.UDim2 = (({ udim2R, udim2W } :: RW) :: any) :: UDim2
+Net.udim2 = (({ udim2R, udim2W } :: RW) :: any) :: UDim2
 
 local color3R, color3W =
 	function(): Color3
@@ -469,10 +470,10 @@ local color3R, color3W =
 		f32W(value.G)
 		f32W(value.B)
 	end
---- @prop Color3 Color3
+--- @prop color3 Color3
 --- @within Net
 --- 32비트 표준 부동소수점으로 구성된 Color3 데이터 타입
-Net.Color3 = (({ color3R, color3W } :: RW) :: any) :: Color3
+Net.color3 = (({ color3R, color3W } :: RW) :: any) :: Color3
 
 local color3uint8R, color3uint8W =
 	function(): Color3
@@ -482,10 +483,10 @@ local color3uint8R, color3uint8W =
 		u8W(math.floor(value.G * 255))
 		u8W(math.floor(value.B * 255))
 	end
---- @prop Color3uint8 Color3
+--- @prop color3uint8 Color3
 --- @within Net
 --- 부호 없는 8비트 정수로 구성된 Color3 데이터 타입
-Net.Color3uint8 = (({ color3uint8R, color3uint8W } :: RW) :: any) :: Color3
+Net.color3uint8 = (({ color3uint8R, color3uint8W } :: RW) :: any) :: Color3
 
 local cframeRotationR, cframeRotationW =
 	function(): CFrame
@@ -517,10 +518,10 @@ local cframeRotationR, cframeRotationW =
 		i32W(elevation)
 	end
 type CFrameRotation = {}
---- @prop CFrameRotation CFrame
+--- @prop cframeRotation CFrame
 --- @within Net
 --- CFrame 회전값
-Net.CFrameRotation = (({ cframeRotationR, cframeRotationW } :: RW) :: any) :: CFrame | CFrameRotation
+Net.cframeRotation = (({ cframeRotationR, cframeRotationW } :: RW) :: any) :: CFrame | CFrameRotation
 
 local cframeR, cframeW =
 	function(): CFrame
@@ -532,10 +533,10 @@ local cframeR, cframeW =
 		vector3W(value.Position)
 		cframeRotationW(value)
 	end
---- @prop CFrame CFrame
+--- @prop cframe CFrame
 --- @within Net
 --- CFrame 데이터 타입
-Net.CFrame = (({ cframeR, cframeW } :: RW) :: any) :: CFrame
+Net.cframe = (({ cframeR, cframeW } :: RW) :: any) :: CFrame
 
 local brickcolorR, brickcolorW =
 	function(): BrickColor
@@ -543,10 +544,10 @@ local brickcolorR, brickcolorW =
 	end, function(value: BrickColor)
 		u16W(value.Number)
 	end
---- @prop BrickColor BrickColor
+--- @prop brickColor BrickColor
 --- @within Net
 --- 16비트 BrickColor 데이터 타입
-Net.BrickColor = (({ brickcolorR, brickcolorW } :: RW) :: any) :: BrickColor
+Net.brickColor = (({ brickcolorR, brickcolorW } :: RW) :: any) :: BrickColor
 
 local numberrangeR, numberrangeW =
 	function(): NumberRange
@@ -555,10 +556,10 @@ local numberrangeR, numberrangeW =
 		f32W(value.Min)
 		f32W(value.Max)
 	end
---- @prop NumberRange NumberRange
+--- @prop numberRange NumberRange
 --- @within Net
 --- NumberRange 데이터 타입
-Net.NumberRange = (({ numberrangeR, numberrangeW } :: RW) :: any) :: NumberRange
+Net.numberRange = (({ numberrangeR, numberrangeW } :: RW) :: any) :: NumberRange
 
 local numbersequenceR, numbersequenceW =
 	function(): NumberSequence
@@ -577,11 +578,10 @@ local numbersequenceR, numbersequenceW =
 			f32W(v.Envelope)
 		end
 	end
---- @prop NumberSequence NumberSequence
-
-Net.NumberSequence = (({ numbersequenceR, numbersequenceW } :: RW) :: any) :: NumberSequence
+--- @prop numberSequence NumberSequence
 --- @within Net
---- NumberSequence 데이터 타입
+--- numberSequence 데이터 타입
+Net.numberSequence = (({ numbersequenceR, numbersequenceW } :: RW) :: any) :: NumberSequence
 local colorsequenceR, colorsequenceW =
 	function(): ColorSequence
 		local count = u32R()
@@ -598,10 +598,10 @@ local colorsequenceR, colorsequenceW =
 			color3W(v.Value)
 		end
 	end
---- @prop ColorSequence ColorSequence
+--- @prop colorSequence ColorSequence
 --- @within Net
 --- ColorSequence 데이터 타입
-Net.ColorSequence = (({ colorsequenceR, colorsequenceW } :: RW) :: any) :: ColorSequence
+Net.colorSequence = (({ colorsequenceR, colorsequenceW } :: RW) :: any) :: ColorSequence
 
 local instanceR, instanceW =
 	function(): Instance
@@ -610,18 +610,18 @@ local instanceR, instanceW =
 	end, function(value: Instance)
 		table.insert(outgoingInstances, value)
 	end
---- @prop Instance Instance
+--- @prop instance Instance
 --- @within Net
 --- 로블록스 인스턴스 데이터 타입
 --- 타입케스팅을 사용하여 인스턴스의 타입을 지정하세요.
-Net.Instance = (({ instanceR, instanceW } :: RW) :: any) :: Instance
+Net.instance = (({ instanceR, instanceW } :: RW) :: any) :: Instance
 
 local enumRWs: { [string]: RW } = {}
---- @prop Enum Enum
+--- @prop enum Enum
 --- @within Net
 --- Enum 데이터 타입
 --- Net.Enum[Enum Name]처럼 인덱싱하여 Enum을 지정하여 사용하세요.
-Net.Enum = (setmetatable(enumRWs, {
+Net.enum = (setmetatable(enumRWs, {
 	__index = function(self, k: string)
 		local enum = (Enum :: { [any]: any })[k] :: Enum
 		local items: { EnumItem } = enum:GetEnumItems()
@@ -656,10 +656,18 @@ type PacketSendableFromClient<T> = {
 }
 
 --[=[
-	페킷 생성을 위한 구조체입니다.
+	페킷 인터페이스 생성을 위한 구조체입니다.
+	초기화되지 않은 단일 페킷 인터페이스는 작동하지 않습니다.
 
-	@param config { from: "server" | "client", reliable: boolean, struct: T & { [string]: any } } -- 페킷을 구성하는 구조체
-	@return Packet -- 페킷 인터페이스
+	```lua
+	Net.Packet {
+		from = "server",
+		reliable = true,
+		struct = {
+			exampleParam = Net.u32
+		}
+	}
+	```
 ]=]
 Net.Packet = (function<T>(config: {
 	from: "server" | "client",
@@ -762,11 +770,34 @@ function Net.RawPacket()
 
 end
 
+function Net.String(legnth)
+	local stringR, stringW =
+		function(): string
+			local length = buffer.readu16(incomingBuffer, read(2))
+			return buffer.readstring(incomingBuffer, read(length), length)
+		end, function(value: string)
+			local length = #value
+			outgoingBufferApos = reserve(2)
+			buffer.writeu16(outgoingBuffer, outgoingBufferApos, length)
+			buffer.writestring(outgoingBuffer, 2, value)
+		end
+	return (({ stringR, stringW } :: RW) :: any) :: string
+end
+
 --[=[
 	페킷 인터페이스를 사용할 수 있는 상태로 초기화하고 페킷의 집합 단위을 구성하기 위한 구조체입니다.
 
-	@param packetInterfaces T & { [string]: BasePacket<any, any> } -- 페킷 이름에 대입된 페킷 인터페이스 집합
-	@return PacketProvider -- 페킷 이름에 대입된 활성화된 페킷의 집합
+	```lua
+	Net.PacketProvider {
+		ExampleNamespace = Net.Packet {
+			from = "client",
+			reliable = true,
+			struct = {
+				exampleParam = Net.u32
+			}
+		}
+	}
+	```
 ]=]
 Net.PacketProvider = (function<T>(packetInterfaces: T & { [string]: BasePacket<any, any> })
 	if type(packetInterfaces) ~= "table" then
@@ -796,42 +827,40 @@ function Net.randomFloat(key: string, min: number, max: number)
 end
 
 if isServer then
-	local fetchHandleStorage
-	function Net.onFetch(address: string, callback: (player: Player) -> ())
-		if not fetchHandleStorage then
-			fetchHandleStorage = Instance.new("Folder")
-			fetchHandleStorage.Name = "Kolloid.Net.FetchHandles"
-			fetchHandleStorage.Parent = ReplicatedStorage
+	local callbacks: { [string]: (player: Player, ...any) -> () } = {}
+	function Net.connectHandle(address: string, callback: (player: Player) -> ())
+		if callbacks[address] then
+			error(`Handle '{address}' has already been connected`)
 		end
-		if fetchHandleStorage:FindFirstChild(address) ~= nil then
-			error(`fetch handle '{address}' is already in use`)
+		callbacks[address] = callback
+		if not remoteFunction then
+			local newRF = Instance.new("RemoteFunction")
+			newRF.Name = "RemoteFunction"
+			newRF.Parent = script
+			newRF.OnServerInvoke = function(player, address, ...)
+				local cb = callbacks[address]
+				if cb then
+					cb(player, ...)
+				end
+			end
+			remoteFunction = newRF
 		end
-		local remote = Instance.new("RemoteFunction")
-		remote.Name = address
-		remote.OnServerInvoke = callback
-		remote.Parent = fetchHandleStorage
 	end
 
 	function Net.disconnectHandle(address: string)
-		if not fetchHandleStorage then
-			error("Handle not initialized")
+		if callbacks[address] then
+			error(`Handle '{address}' was not connected`)
 		end
-		local handle = fetchHandleStorage:FindFirstChild(address)
-		if not handle then
-			error(`Handle '{address}' not found`)
-		end
-		handle:Destroy()
-		handle = nil
+		callbacks[address] = nil
 	end
 else
-	local fetchHandleStorage
-	function Net.fetchAsync(address: string, query: {})
+	function Net.fetch(address: string, query: {})
 		return Promise.new(function(resolve, reject, onCancel)
-			if not fetchHandleStorage then
-				fetchHandleStorage = ReplicatedStorage:WaitForChild("Kolloid.Net.FetchHandles")
+			remoteFunction = script:WaitForChild("RemoteFunction", 10) :: RemoteFunction
+			if not remoteFunction then
+				return reject("No response from the server")
 			end
-			local fetchHandle = fetchHandleStorage:WaitForChild(address) :: RemoteFunction
-			local data = fetchHandle:InvokeServer(query)
+			local data = remoteFunction:InvokeServer(query)
 			resolve(data)
 		end)
 	end
