@@ -36,6 +36,16 @@ end
 
 --[=[
 	튜플에서 선택적 값으로 예상합니다.
+
+	```lua
+	local function foo(a: number?, b: string?)
+		Strict.Tuple()
+		:expectOptional(a, "number") -- Bad tuple index #1: number expected, got string
+		:expectOptional(b, "string")
+	end
+
+	foo("wrong type", nil)
+	```
 ]=]
 function Tuple:expectOptional<T>(value: T, typeName: BasicTypes)
 	errorLevel = 3
@@ -45,6 +55,20 @@ function Tuple:expectOptional<T>(value: T, typeName: BasicTypes)
 	return self
 end
 
+--[=[
+	현재 튜플 index를 한번 건너뜁니다.
+
+	```lua
+	local function foo(a: number, b: any, c: string)
+		Strict.Tuple()
+		:expect(a, "number")
+		:skip()
+		:expect(b, "string")
+	end
+
+	foo(123, { anything = 123 }, "example")
+	```
+]=]
 function Tuple:skip()
 	self.index += 1
 	return self
@@ -60,12 +84,27 @@ local function concatMessage(...: string?): string
 	return m
 end
 
+--[=[
+	예상의 예외 메시지를 생성하기 위한 구조체입니다.
+
+	```lua
+	error(Strict.ExpectException("wrong value", "number")) --- number expected, got string
+	```
+]=]
 function Strict.ExpectException<T>(value: T, typeName: BasicTypes, ...: string?)
 	local t = Strict.typeof(value)
 	local message = concatMessage(...)
 	return `{message}(optional) {typeName} expected, got {t}`
 end
 
+--[=[
+	주어진 값에 대해 특정 타입으로 예상합니다.
+	값의 타입과 주어진 타입이 일치하지 않으면 오류가 발생합니다.
+
+	```lua
+	Strict.expect("wrong value", "number") --- number expected, got string
+	```
+]=]
 function Strict.expect<T>(value: T, typeName: BasicTypes?, ...: string?): never?
 	local t = Strict.typeof(value)
 	if typeName then
