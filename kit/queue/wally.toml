@@ -5,3 +5,5 @@ registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 
 [dependencies]
+# kit
+strict = "caveful-games/strict@^1.0.0"

@@ -11,4 +11,4 @@ option = "lukadev-0/option@1.0.0"
 # kit
 hook = "caveful-games/hook@^0.1.0"
 debugger = "caveful-games/debugger@^0.1.0"
-strict = "caveful-games/strict@^0.1.0"
+strict = "caveful-games/strict@^1.0.0"
