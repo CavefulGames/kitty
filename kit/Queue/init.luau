@@ -10,7 +10,7 @@ local setting = {
         RunningTime = 'number';
         UseFunctionName = 'boolean';
         Add = 'function';
-    };
+    }; 
     Base = {
         Name = 'BaseName' :: string;
         RunningTime = 0 :: number;
