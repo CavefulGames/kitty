@@ -1,9 +1,7 @@
 [package]
-name = "caveful-games/strict"
+name = "caveful-games/Queue"
 version = "0.1.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
- 
+
 [dependencies]
-# kit
-capsule = "caveful-games/capsule@^0.1.0"
