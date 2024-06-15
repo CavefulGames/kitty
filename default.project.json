@@ -8,7 +8,7 @@
 			"packages": {
 				"$path": "Packages",
 				"bricklayer": {
-					"$path": "kit/bricklayer"
+					"$path": "kit/"
 				},
 
 				"debugger": {
@@ -42,7 +42,10 @@
 					"$path": "kit/userconfig"
 				},
 				"when": {
-					"$path": "kit/when"
+					"$path": "kit/"
+				},
+				"Queue": {
+					"$path": "kit/Queue"
 				}
 			}
 		}
