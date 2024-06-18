@@ -3,7 +3,7 @@
 --// $Packages
 local Strict = require(script.Parent.strict)
 
-local Queue = {} :: Queue
+local Queue = {} :: QueueImpl
 Queue.__index = Queue
 
 type QueueImpl = {
