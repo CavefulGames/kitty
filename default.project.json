@@ -41,6 +41,9 @@
 				"userconfig": {
 					"$path": "kit/userconfig"
 				},
+				"when": {
+					"$path": "kit/when"
+				},
 				"queue": {
 					"$path": "kit/queue"
 				}
