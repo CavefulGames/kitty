@@ -3,12 +3,12 @@
 --// $Packages
 local Strict = require(script.Parent.strict)
 
-local Queue = {}
+local Queue = {} :: Queue
 Queue.__index = Queue
 
 type QueueImpl = {
 	__index: QueueImpl,
-	new: (name: string, runningTime: number, useFunctionName: boolean) -> (),
+	new: (name: string, runningTime: number, useFunctionName: boolean) -> (Queue),
 	Add: (self: Queue, func: (any) -> any, FuncName: string, async: boolean) -> (),
 	RunningList: (self: Queue, pra: { any }) -> (),
 	Destroy: (self: Queue) -> ()
