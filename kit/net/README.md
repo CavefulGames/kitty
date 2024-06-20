@@ -1,5 +1,5 @@
 # Net
-- ByteNet과 Zap에 영감을 얻은 네트워킹 라이브러리
+- ByteNet과 Zap에 영감을 얻은 서버와 클라이언트 교신을 위한 네트워킹 라이브러리
 
 # Example
 `packets.luau`

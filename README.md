@@ -12,7 +12,11 @@ Kitty(키티)는 Caveful Games 개발팀에서 사용하는 개발 도구 키트
 - NPM과 비슷하여 더 편리해진 `wally install` 명령어
 - 빠르고 쉬운 로블록스 게임 개발을 위한 다양하고 유용한 라이브러리 키트 포함
 
+# 참고
+- 모든 라이브러리 키트 wally 페키지의 스코프는 caveful-games입니다. (ex. caveful-games/strict)
+
 # 사용가능한 기능
+아직 많은 기능들이 구현중에 있습니다.
 ## 라이브러리 키트
 - queue
 - strict
