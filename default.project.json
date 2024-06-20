@@ -44,8 +44,8 @@
 				"when": {
 					"$path": "kit/when"
 				},
-				"Queue": {
-					"$path": "kit/Queue"
+				"queue": {
+					"$path": "kit/queue"
 				}
 			}
 		}

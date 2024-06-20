@@ -2,15 +2,17 @@
 
 --// $Packages
 local Strict = require(script.Parent.strict)
+
+local Queue = {} :: QueueImpl
+Queue.__index = Queue
+
 type QueueImpl = {
 	__index: QueueImpl,
-	new: (name: string, runningTime: number, useFunctionName: boolean) -> (),
+	new: (name: string, runningTime: number, useFunctionName: boolean) -> (Queue),
 	Add: (self: Queue, func: (any) -> any, FuncName: string, async: boolean) -> (),
 	RunningList: (self: Queue, pra: { any }) -> (),
 	Destroy: (self: Queue) -> ()
 }
-local Queue = {} :: QueueImpl
-Queue.__index = Queue
 
 --// $Types
 export type Queue = typeof(setmetatable({} :: {
@@ -18,7 +20,6 @@ export type Queue = typeof(setmetatable({} :: {
 	Queue: { any },
 	RunningTime: number,
 	UseFunctionName: boolean,
-	Enabled: boolean
 }, {} :: QueueImpl))
 
 --// $PrivateVariables
@@ -41,9 +42,9 @@ function Queue.new(name, runningTime, useFunctionName)
 	:expect(runningTime, "number")
 	:expect(useFunctionName, "boolean")
 
-	if table.find(queueNameList, name) then
+	if queueNameList[name] then
 		local _i = 1
-		for k, v in queueNameList do
+		for _, v in queueNameList do
 			if string.sub(v, 3) == name then
 				_i += 1
 			end
@@ -51,26 +52,21 @@ function Queue.new(name, runningTime, useFunctionName)
 
 		name = `{_i}_{name}`
 	end
-
+	
 	local self = {
 		Name = name,
 		Queue = {},
 		RunningTime = runningTime,
 		UseFunctionName = useFunctionName,
-		Enabled = true,
 	}
 
 	local newQueue = setmetatable(self, Queue)
-	table.insert(queueNameList, name)
+    queueNameList[name] = name
 
 	return newQueue
 end
 
 function Queue:Add(func, FuncName, async)
-	if not self.Enabled then
-		return
-	end
-
 	local TypecheckingTuple = Strict.Tuple.new()
 
 	TypecheckingTuple
@@ -86,32 +82,28 @@ function Queue:Add(func, FuncName, async)
 			assert(v[2] ~= FuncName, "중복돼는 이름의 add 는 안됌")
 		end
 
-		if FuncName then
-			return table.insert(self.Queue, { func :: any, FuncName, async })
-		else
-			return error("use name")
-		end
+		return table.insert(self.Queue, { func :: any, FuncName, async })
 	else
 		return table.insert(self.Queue, { func :: any, nil, async })
 	end
 end
 
+--// 만든 Queue 안에있는 함수들을 실행 
 function Queue:RunningList(pra: { any })
-	if not self.Enabled then
-		return
-	end
-
-	for k, v in self.Queue do
-		if v[3] then
+	--// v -> (함수 , 함수명 , 에이씽크(비동기 유무)) , 함수실행
+	for i=1 , #self.Queue do
+		local value = self.Queue[i] :: {}
+		if value[3] then
+			--// 비동기
 			task.spawn(function()
 				task.wait(self.RunningTime)
 				if self.UseFunctionName then
 					pcall(function()
-						v[1](table.unpack(pra[v[2]]))
+						value[1](table.unpack(pra[value[2]]))
 					end)
 				else
 					pcall(function()
-						v[1]()
+						value[1]()
 					end)
 				end
 			end)
@@ -119,21 +111,21 @@ function Queue:RunningList(pra: { any })
 			task.wait(self.RunningTime)
 			if self.UseFunctionName then
 				pcall(function()
-					v[1](table.unpack(pra[v[2]]))
+					value[1](table.unpack(pra[value[2]]))
 				end)
 			else
 				pcall(function()
-					v[1]()
+					value[1]()
 				end)
 			end
 		end
-		Queue[k] = nil
 	end
+	
+	self.Queue = {}
 end
 
 function Queue:Destroy()
 	queueNameList[self.Name] = nil
-	self.Enabled = false
 end
 
 return Queue
