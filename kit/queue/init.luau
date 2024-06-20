@@ -23,7 +23,7 @@ export type Queue = typeof(setmetatable({} :: {
 }, {} :: QueueImpl))
 
 --// $PrivateVariables
-local queueNameList = {}
+local queueNameList = {} :: { [string]: string }
 local base = {
 	name = "BaseName" :: string,
 	runningTime = 0 :: number,
@@ -52,7 +52,7 @@ function Queue.new(name, runningTime, useFunctionName)
 
 		name = `{_i}_{name}`
 	end
-	
+
 	local self = {
 		Name = name,
 		Queue = {},
@@ -88,7 +88,7 @@ function Queue:Add(func, FuncName, async)
 	end
 end
 
---// 만든 Queue 안에있는 함수들을 실행 
+--// 만든 Queue 안에있는 함수들을 실행
 function Queue:RunningList(pra: { any })
 	--// v -> (함수 , 함수명 , 에이씽크(비동기 유무)) , 함수실행
 	for i=1 , #self.Queue do
@@ -120,7 +120,7 @@ function Queue:RunningList(pra: { any })
 			end
 		end
 	end
-	
+
 	self.Queue = {}
 end
 

@@ -21,6 +21,7 @@ local Players = game:GetService("Players")
 
 --// $PrivateVariables
 local isServer = RunService:IsServer()
+local eventId = 0
 local outgoingBuffer: buffer
 local outgoingBufferUsed: number
 local outgoingBufferSize: number
@@ -30,8 +31,6 @@ local incomingBuffer: buffer
 local incomingBufferRead: number
 local incomingInstances: { Instance }
 local incomingInstancePos: number
-local reliableRemoteEvent: RemoteEvent
-local unreliableRemoteEvent: UnreliableRemoteEvent
 local remoteFunction: RemoteFunction
 local packetId = 1
 local packetNames = {}
@@ -127,11 +126,17 @@ local function loadPlayer(player: Player)
 end
 
 --// $Events
+loadEmpty()
+fetchRemoteEvents()
 if isServer then
 	Players.PlayerRemoving:Connect(function(player)
 		playerMap[player] = nil
 	end)
 
+	--[=[
+		서버에서 send하면 대상 플레이어에게 보내야하기 때문에 플레이어와 보낼 데이터를
+		playerMap에 넣게 되는데 그걸 차례로 보내는 역할을 함
+	]=]
 	RunService.Heartbeat:Connect(function()
 		for player, outgoing in playerMap do
 			if outgoing.used > 0 then
@@ -150,6 +155,9 @@ if isServer then
 else
 	local time = 0
 
+	--[=[
+		클라이언트에서는 나갈 데이터가 생기면 생기는 대로 바로바로 서버로 보내줌
+	]=]
 	RunService.Heartbeat:Connect(function(dt)
 		time += dt
 
@@ -167,6 +175,63 @@ else
 				outgoingBufferSize = 64
 				table.clear(outgoingInstances)
 			end
+		end
+	end)
+
+	--[=[
+		받는건 서버에서 핸들링하는 방식과 비슷함
+	]=]
+	reliableRemoteEvent.OnClientEvent:Connect(function(buff, inst)
+		incomingBuffer = buff
+		incomingInstances = inst
+		incomingBufferRead = 0
+		incomingInstancePos = 0
+		local len = buffer.len(buff)
+		while incomingBufferRead < len do
+			local id = buffer.readu8(buff, read(1))
+			if id == 2 then
+				local value
+				value = {}
+				value.sans = buffer.readu16(incoming_buff, read(2))
+				if events[2][1] then
+					for _, cb in events[2] do
+						cb(value)
+					end
+				else
+					table.insert(event_queue[2], value)
+					if #event_queue[2] > 64 then
+						warn(`[ZAP] {#event_queue[2]} events in queue for lmao. Did you forget to attach a listener?`)
+					end
+				end
+			else
+				error("Unknown event id")
+			end
+		end
+	end)
+
+	unreliable.OnClientEvent:Connect(function(buff, inst)
+		incoming_buff = buff
+		incoming_inst = inst
+		incoming_read = 0
+		incoming_ipos = 0
+		local id = buffer.readu8(buff, read(1))
+		if id == 1 then
+			local value
+			value = {}
+			value.foo = buffer.readstring(incoming_buff, read(10), 10)
+			value.bar = buffer.readu32(incoming_buff, read(4))
+			if events[1][1] then
+				for _, cb in events[1] do
+					cb(value)
+				end
+			else
+				table.insert(event_queue[1], value)
+				if #event_queue[1] > 64 then
+					warn(`[ZAP] {#event_queue[1]} events in queue for lol. Did you forget to attach a listener?`)
+				end
+			end
+		else
+			error("Unknown event id")
 		end
 	end)
 end
@@ -656,12 +721,11 @@ type PacketSendableFromClient<T> = {
 }
 
 --[=[
-	페킷 인터페이스 생성을 위한 구조체입니다.
-	초기화되지 않은 단일 페킷 인터페이스는 작동하지 않습니다.
+	PacketProvider에 새로운 페킷을 정의합니다.
 
 	```lua
-	Net.Packet {
-		from = "server",
+	Net.definePacket {
+		from = "Server",
 		reliable = true,
 		struct = {
 			exampleParam = Net.u32
@@ -669,24 +733,22 @@ type PacketSendableFromClient<T> = {
 	}
 	```
 ]=]
-Net.Packet = (function<T>(config: {
-	from: "server" | "client",
+Net.definePacket = (function<T>(config: {
+	from: "Server" | "Client",
 	reliable: boolean,
-	struct: T & { [string]: any }
+	data: T
 })
 	local packet = {} :: any
 	local from = config.from
 	local reliable = config.reliable
-	local struct = config.struct
+	local readWriters = config.data --// 싱글, 테이블 가능
+	local isReadWritersTable = type(readWriters) == "table"
 	local packetId: number
 
 	if from ~= "server" and from ~= "client" then
 		error(`Packet config 'from' expected 'server' or 'client' got {from}`)
 	end
 	Strict.expect(reliable, "boolean")
-	if type(struct) ~= "table" then
-		error(Strict.ExpectException(struct, "table"))
-	end
 
 	if isServer and from == "server" then
 		local writers = {}
@@ -733,6 +795,10 @@ Net.Packet = (function<T>(config: {
 		end
 	elseif not isServer and from == "client" then
 		local writers = {}
+		for k, v in struct do
+			writers[k] = v[2]
+		end
+
 		packet.sendToServer = function(data: T)
 			if type(data) ~= "table" then
 				error(Strict.ExpectException(data, "table"))
@@ -746,6 +812,7 @@ Net.Packet = (function<T>(config: {
 	else
 		local readers = {}
 		packet.onReceive = Hook() :: Hook.HookedEvent<T>
+
 	end
 
 	packet._init = function(id: number) --// used internally with packet interface
@@ -757,16 +824,41 @@ Net.Packet = (function<T>(config: {
 
 	return table.freeze(packet)
 end :: any) :: (<T>(config: {
-	from: "client",
+	from: "Client",
 	reliable: boolean,
-	struct: T
+	data: T
 }) -> BasePacket<T, PacketSendableFromClient<T>>) & (<T>(packet: {
-	from: "server",
+	from: "Server",
 	reliable: boolean,
-	struct: T
+	data: T
 }) -> BasePacket<T, PacketSendableFromServer<T>>)
 
-function Net.RawPacket()
+--[=[
+	PacketProvider에 새로운 페킷을 정의합니다.
+	definePacket()과 같이 자동으로 (역)직렬화를 수행하지 않습니다.
+
+	수동으로 (역)직렬화를 구현하여 더 빠르게 페킷을 보낼 있는 상황에 적합합니다.
+
+	```lua
+	Net.defineRawPacket({
+		from = "Client",
+		reliable = true,
+		dataType = {
+			exampleParam = Net.i32
+		},
+		serializer = function(createBuffer, data)
+			local b = createBuffer(4)
+			buffer.writei32(b, 1, data.exampleParam)
+			return b
+		end,
+		deserializer = function(b)
+			local data = {}
+			data.exampleParam
+		end
+	})
+	```
+]=]
+function Net.defineRawPacket()
 
 end
 
@@ -785,36 +877,97 @@ function Net.String(legnth)
 end
 
 --[=[
-	페킷 인터페이스를 사용할 수 있는 상태로 초기화하고 페킷의 집합 단위을 구성하기 위한 구조체입니다.
+	페킷 집합 단위를 결정하는 네임스페이스를 정의합니다.
+	키벨류를 통하여 페킷의 이름을 설정할 수 있습니다.
+	같은 참조를 통하여 서버/클라이언트가 상호작용하므로 한 모듈에 정의하는 것이 적절합니다.
+
+	서버 사이드에서는 server, 클라이언트 사이드에서는 client 필드에 반환됩니다.
 
 	```lua
-	Net.PacketProvider {
-		ExampleNamespace = Net.Packet {
-			from = "client",
+	Net.defineNamespace("MyNetworking", {
+		ExamplePacketName = Net.definePacket({
+			from = "Client",
 			reliable = true,
 			struct = {
 				exampleParam = Net.u32
 			}
-		}
-	}
+		})
+	})
 	```
 ]=]
-Net.PacketProvider = (function<T>(packetInterfaces: T & { [string]: BasePacket<any, any> })
-	if type(packetInterfaces) ~= "table" then
-		error(Strict.ExpectException(packetInterfaces, "table"))
+Net.defineNamespace = (function<T>(name: string, packets: T & { [string]: BasePacket<any, any> })
+	if type(packets) ~= "table" then
+		error(Strict.ExpectException(packets, "table"))
 	end
-	local packets = {}
-	for names, packet in packetInterfaces do
-		packet._init(#packets)
-		table.insert(packets, packet)
+	for _, packet in packets do
+		local id = #packets
+		packet._init(id)
+		packets[id] = packet
 	end
+	local provider = {}
+	if isServer then
+		provider.server = packets
+		local reliableRemoteEvent = Instance.new("RemoteEvent")
+		reliableRemoteEvent.Name = string.format("%x", eventId)
+		local unreliableRemoteEvent = Instance.new("UnreliableRemoteEvent")
+		--[=[
+			클라이언트에서 서버로 데이터를 보냈을 때 그 버퍼를 다 읽을 때 까지 반복하여 읽어서
+			이벤트에 연결된 함수들을 실행합니다.
+		]=]
+		reliableRemoteEvent.OnServerEvent:Connect(function(player, buff, inst)
+			incomingBuffer = buff
+			incomingInstances = inst
+			incomingBufferRead = 0
+			incomingInstancePos = 0
+			local len = buffer.len(buff)
+			while incomingBufferRead < len do
+				local id = buffer.readu8(buff, read(1))
+				if id == 2 then --- 여기서 부터 수정 필요
+					local value
+					value = {}
+					local len = buffer.readu16(incomingBuffer, read(2))
+					value.foo = buffer.readstring(incomingBuffer, read(len), len)
+					value.bar = buffer.readu32(incomingBuffer, read(4))
+					for _, cb in events[2] do
+						task.spawn(cb, player, value)
+					end
+				else
+					error("Unknown event id")
+				end
+			end
+		end)
+
+		unreliableRemoteEvent.OnServerEvent:Connect(function(player, buff, inst)
+			incomingBuffer = buff
+			incomingInstances = inst
+			incomingBufferRead = 0
+			incomingInstancePos = 0
+			local id = buffer.readu8(buff, read(1))
+			if id == 1 then --- 여기서 부터 수정 필요
+				local value
+				value = {}
+				local len = buffer.readu16(incomingBuffer, read(2))
+				value.foo = buffer.readstring(incomingBuffer, read(len), len)
+				value.bar = buffer.readu32(incomingBuffer, read(4))
+				for _, cb in events[1] do
+					task.spawn(cb, player, value)
+				end
+			else
+				error("Unknown event id")
+			end
+		end)
+	else
+		provider.client = packets
+	end
+
+	return provider
 end :: any) :: (<T>(packetInterface: T & { [string]: BasePacket<any, PacketSendableFromClient<any>> }) -> ({
 	server: { [string]: { sendToServer: nil } } & T, client: { [string]: { sendTo: nil, onReceive: nil } } & T
 })) & (<T>(packetInterface: T & { [string]: BasePacket<any, PacketSendableFromServer<any>> }) -> ({
 	server: { [string]: { sendToServer: nil, onReceive: nil } } & T, client: { [string]: { sendTo: nil, broadcast: nil } } & T
 }))
 
-function Net.RemoteStruct()
+function Net.createRemoteStruct()
 
 end
 
@@ -865,8 +1018,5 @@ else
 		end)
 	end
 end
-
-loadEmpty()
-fetchRemoteEvents()
 
 return Strict.Capsule(Net)

@@ -1,5 +1,26 @@
-# Kitty - Development kit & Tools for Wally and Rojo
-Kitty is Caveful Games's new workflow, and the Kolloid Framework, which was previously under development and was scheduled to be used as our workflow, will be abandoned and replaced by Kitty.
+# 한국어
+문서들은 한국어로 먼저 작성되었으며 영문판은 추후에 제작될 예정입니다.
 
-# Progress
-Most parts of kitty have not been implemented yet and we are currently implementing the kit.
+# 설명
+Kitty(키티)는 Caveful Games 개발팀에서 사용하는 개발 도구 키트이며 Rojo와 Wally 기반으로 개발되었습니다.
+
+# 기능
+- Wally에서 페키지 다운로드
+- wally-package-types를 내부적으로 사용하여 타입 자동 추출
+- Rojo를 통한 로블록스 스튜디오 / 파일시스템 연동
+- 파일시스템에 에셋을 추가해 로블록스 스튜디오에서 미리보기 및 업로드 지원
+- NPM과 비슷하여 더 편리해진 `wally install` 명령어
+- 빠르고 쉬운 로블록스 게임 개발을 위한 다양하고 유용한 라이브러리 키트 포함
+
+# 사용가능한 기능
+## 라이브러리 키트
+- queue
+- strict
+## CLI 도구
+- 미완성
+
+# 영감
+키티는 RbxUtil과 Rojo, Wally, NPM과 같은 CLI 개발 도구에 영감을 얻고 개발되었습니다.
+
+# 사용된 게임
+- 동굴부대2
