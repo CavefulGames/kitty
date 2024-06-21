@@ -221,7 +221,7 @@ function Strict.Capsule(module)
 end
 
 --[=[
-	외부에서 변경 가능하고 런타입 타입 체킹 가능한 가변 변수를 만들고 setter/getter 인터페이스를 생성합니다.
+	런타입 타입 체킹 가능한 가변 변수를 만들고 setter/getter 인터페이스를 생성합니다.
 	read-only 테이블 안에서 사용하는 것이 적합합니다.
 
 	```lua
@@ -231,15 +231,37 @@ end
 	value("wrong value") --- not ok
 	```
 ]=]
-function Strict.createValue<T>(initialValue: T, callback: (newValue: T) -> ()?): (newValue: T?) -> T
+function Strict.createValue<T>(initialValue: T, callback: (newValue: T) -> ()?): (newValue: T?) -> (T)
 	local value = initialValue
-	local t = typeof(initialValue)
+	local t = Strict.typeof(initialValue)
 	return function(newValue: T?): T
 		if newValue == nil then
 			return value
 		end
-		if typeof(newValue) ~= t then
-			error(`{t} expected, got {typeof(newValue)}`, 2)
+		if Strict.typeof(newValue) ~= t then
+			error(`{t} expected, got {Strict.typeof(newValue)}`, 2)
+		end
+		local oldValue = value
+		value = newValue
+		if callback then
+			callback(newValue)
+		end
+		return oldValue
+	end
+end
+
+--[=[
+	런타임 타입 체킹 가능한 비어있는 가변 변수를 만들고 setter/getter 인터페이스를 반환합니다.
+]=]
+function Strict.createEmptyValue(typeName: BasicTypes, callback: (newValue: any) -> ()?): (newValue: any) -> ()
+	local value = nil
+	local t = typeName
+	return function(newValue)
+		if newValue == nil then
+			return value
+		end
+		if Strict.typeof(newValue) ~= t then
+			error(`{t} expected, got {Strict.typeof(newValue)}`, 2)
 		end
 		local oldValue = value
 		value = newValue
@@ -254,13 +276,13 @@ end
 	Strict.typeof로 타입을 확인 가능한 타입이 적용된 오브젝트로 변경하여 반환합니다.
 
 	```lua
-	local myTypedObject = Strict.TypedObject("Kitty", {
+	local myTypedObject = Strict.ObjectTyped("Kitty", {
 		name = "kitty"
 	})
 	print(Strict.typeof(myTypedObject)) --- output: "Kitty"
 	```
 ]=]
-function Strict.TypedObject<T>(typeName: BasicTypes, t: T?): T
+function Strict.ObjectTyped<T>(typeName: BasicTypes, t: T?): T
 	Strict.Tuple.new():expect(typeName, "string"):expectOptional(t, "table")
 	if type(t) ~= "table" then
 		error(Strict.ExpectException(t, "table"))

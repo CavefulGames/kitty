@@ -1,47 +1,59 @@
 --!strict
 
---// inspired by bytenet and zap
+--- inspired by bytenet and zap
+--- *RW = Reader & Writer
 
---// $Kit
+--- $Kit
 local Hook = require(script.Parent.hook)
 local Debugger = require(script.Parent.debugger)
 local Strict = require(script.Parent.strict)
 --- @class Net
 local Net = {}
 
---// $Packages
+--- $Packages
 local MsgPack = require(script.Parent["msgpack-luau"])
 local Promise = require(script.Parent.promise)
 local CRC16 = require(script.Parent.crc16)
 
---// $Services
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+--- $Services
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
---// $PrivateVariables
+--- $PrivateVariables
 local isServer = RunService:IsServer()
-local eventId = 0
 local outgoingBuffer: buffer
 local outgoingBufferUsed: number
 local outgoingBufferSize: number
-local outgoingBufferApos: number
+local outgoingBufferAllocatedPosition: number
 local outgoingInstances: { Instance }
+local outgoingRemoteEvent: RemoteEvent
 local incomingBuffer: buffer
 local incomingBufferRead: number
 local incomingInstances: { Instance }
-local incomingInstancePos: number
+local incomingInstancePosition: number
 local remoteFunction: RemoteFunction
-local packetId = 1
 local packetNames = {}
 local events = {}
 local writingDebuggerWarned = false
-local playerMap: { [Player]: {
-	buff: buffer,
-	inst: { Instance },
-	size: number,
-	used: number
-} } = {}
+local playerMap: {
+	[Player]: _1Buff_2Used_3Size_4Inst_5Evnt
+} = {}
+local reliableRemoteEventFolder = Instance.new("Folder")
+reliableRemoteEventFolder.Name = ""
+reliableRemoteEventFolder.Parent = script
+local unreliableRemoteEventFolder = Instance.new("Folder")
+unreliableRemoteEventFolder.Name = ""
+unreliableRemoteEventFolder.Parent = script
+
+--- $Types
+-- type PlayerMapData = {
+-- 	buff: buffer,
+-- 	inst: { Instance },
+-- 	size: number,
+-- 	used: number,
+-- 	remo: RemoteEvent
+-- }
+type _1Buff_2Used_3Size_4Inst_5Evnt = { [number]: any }
 
 --// $Constants
 local EXECEPTION_OUT_OF_RANGE = "Literal out of range for '%s'"
@@ -49,38 +61,21 @@ local EXECEPTION_NEGATIVE_NUMBER = "Cannot apply unary operator '-' to type '%s'
 local EXECEPTION_FLOATING_NUMBER = "Expected '%s', found floating-point number"
 
 --// $PrivateFunctions
-local function fetchRemoteEvents()
-	if isServer then
-		reliableRemoteEvent = Instance.new("RemoteEvent")
-		reliableRemoteEvent.Name = "ReliableRemoteEvent"
-		reliableRemoteEvent.Parent = script
-		unreliableRemoteEvent = Instance.new("UnreliableRemoteEvent")
-		unreliableRemoteEvent.Name = "UnreliableRemoteEvent"
-		unreliableRemoteEvent.Parent = script
-	else
-		reliableRemoteEvent = script:WaitForChild("ReliableRemoteEvent", 10) :: any
-		unreliableRemoteEvent = script:WaitForChild("UnreliableRemoteEvent", 10) :: any
-	end
+local function load(data: _1Buff_2Used_3Size_4Inst_5Evnt)
+	outgoingBuffer = data[1]
+	outgoingBufferUsed = data[2]
+	outgoingBufferSize = data[3]
+	outgoingInstances = data[4]
+	outgoingRemoteEvent = data[5]
 end
 
-local function load(data: {
-	buff: buffer,
-	used: number,
-	size: number,
-	inst: { Instance },
-})
-	outgoingBuffer = data.buff
-	outgoingBufferUsed = data.used
-	outgoingBufferSize = data.size
-	outgoingInstances = data.inst
-end
-
-local function save()
+local function save(): _1Buff_2Used_3Size_4Inst_5Evnt
 	return {
-		buff = outgoingBuffer,
-		used = outgoingBufferUsed,
-		size = outgoingBufferSize,
-		inst = outgoingInstances,
+		outgoingBuffer,
+		outgoingBufferUsed,
+		outgoingBufferSize,
+		outgoingInstances,
+		outgoingRemoteEvent
 	}
 end
 
@@ -91,7 +86,7 @@ local function loadEmpty()
 	outgoingInstances = {}
 end
 
-local function reserve(size: number)
+local function allocate(size: number)
 	if outgoingBufferUsed + size > outgoingBufferSize then
 		while outgoingBufferUsed + size > outgoingBufferSize do
 			outgoingBufferSize = outgoingBufferSize * 2
@@ -103,7 +98,7 @@ local function reserve(size: number)
 		outgoingBuffer = new_buff
 	end
 
-	outgoingBufferApos = outgoingBufferUsed
+	outgoingBufferAllocatedPosition = outgoingBufferUsed
 	outgoingBufferUsed += size
 end
 
@@ -127,7 +122,6 @@ end
 
 --// $Events
 loadEmpty()
-fetchRemoteEvents()
 if isServer then
 	Players.PlayerRemoving:Connect(function(player)
 		playerMap[player] = nil
@@ -143,7 +137,7 @@ if isServer then
 				local buff = buffer.create(outgoing.used)
 				buffer.copy(buff, 0, outgoing.buff, 0, outgoing.used)
 
-				reliableRemoteEvent:FireClient(player, buff, outgoing.inst)
+				outgoingRemoteEvent:FireClient(player, buff, outgoing.inst)
 
 				outgoing.buff = buffer.create(64)
 				outgoing.used = 0
@@ -153,11 +147,10 @@ if isServer then
 		end
 	end)
 else
-	local time = 0
-
 	--[=[
 		클라이언트에서는 나갈 데이터가 생기면 생기는 대로 바로바로 서버로 보내줌
 	]=]
+	local time = 0
 	RunService.Heartbeat:Connect(function(dt)
 		time += dt
 
@@ -168,7 +161,7 @@ else
 				local buff = buffer.create(outgoingBufferUsed)
 				buffer.copy(buff, 0, outgoingBuffer, 0, outgoingBufferUsed)
 
-				reliableRemoteEvent:FireServer(buff, outgoingInstances)
+				outgoingRemoteEvent:FireServer(buff, outgoingInstances)
 
 				outgoingBuffer = buffer.create(64)
 				outgoingBufferUsed = 0
@@ -177,70 +170,20 @@ else
 			end
 		end
 	end)
-
-	--[=[
-		받는건 서버에서 핸들링하는 방식과 비슷함
-	]=]
-	reliableRemoteEvent.OnClientEvent:Connect(function(buff, inst)
-		incomingBuffer = buff
-		incomingInstances = inst
-		incomingBufferRead = 0
-		incomingInstancePos = 0
-		local len = buffer.len(buff)
-		while incomingBufferRead < len do
-			local id = buffer.readu8(buff, read(1))
-			if id == 2 then
-				local value
-				value = {}
-				value.sans = buffer.readu16(incoming_buff, read(2))
-				if events[2][1] then
-					for _, cb in events[2] do
-						cb(value)
-					end
-				else
-					table.insert(event_queue[2], value)
-					if #event_queue[2] > 64 then
-						warn(`[ZAP] {#event_queue[2]} events in queue for lmao. Did you forget to attach a listener?`)
-					end
-				end
-			else
-				error("Unknown event id")
-			end
-		end
-	end)
-
-	unreliable.OnClientEvent:Connect(function(buff, inst)
-		incoming_buff = buff
-		incoming_inst = inst
-		incoming_read = 0
-		incoming_ipos = 0
-		local id = buffer.readu8(buff, read(1))
-		if id == 1 then
-			local value
-			value = {}
-			value.foo = buffer.readstring(incoming_buff, read(10), 10)
-			value.bar = buffer.readu32(incoming_buff, read(4))
-			if events[1][1] then
-				for _, cb in events[1] do
-					cb(value)
-				end
-			else
-				table.insert(event_queue[1], value)
-				if #event_queue[1] > 64 then
-					warn(`[ZAP] {#event_queue[1]} events in queue for lol. Did you forget to attach a listener?`)
-				end
-			end
-		else
-			error("Unknown event id")
-		end
-	end)
 end
 
---// $SerDes $Fields
+--// $Streams
 --// write (buffer, offset, value)
 --// read (buffer, offset)
-type RW = { [number]: (value: any) -> any }
 type AdvancedPrimitiveNumber = { value: number, callback: () -> ()?, doClamp: boolean?, lastSentServerTime: number?, lastWrote: string?, timeTakenToWrite: number?, doRecord: boolean? }
+
+local function createBufferRWS<T>(reader: any, writer: any, size: number?): any
+	return Strict.ObjectTyped("BufferRWS", {
+		reader,
+		writer,
+		size
+	})
+end
 
 local u8R, u8W =
 	function(): number
@@ -256,14 +199,14 @@ local u8R, u8W =
 				Debugger.warn(EXECEPTION_FLOATING_NUMBER:format(t))
 			end
 		end
-		reserve(1)
-		buffer.writeu8(outgoingBuffer, outgoingBufferApos, value)
+		allocate(1)
+		buffer.writeu8(outgoingBuffer, outgoingBufferAllocatedPosition, value)
 	end
 export type u8 = AdvancedPrimitiveNumber
 --- @prop u8 number
 --- @within Net
 --- 부호 없는 8비트 정수
-Net.u8 = (({ u8R, u8W } :: RW) :: any) :: number | u8
+Net.u8 = createBufferRWS(u8R, u8W, 1) :: number | u8
 
 local u16R, u16W =
 	function(): number
@@ -278,14 +221,14 @@ local u16R, u16W =
 				Debugger.warn("Expected 'u16', found floating-point number")
 			end
 		end
-		reserve(2)
-		buffer.writeu16(outgoingBuffer, outgoingBufferApos, value)
+		allocate(2)
+		buffer.writeu16(outgoingBuffer, outgoingBufferAllocatedPosition, value)
 	end
 export type u16 = AdvancedPrimitiveNumber
 --- @prop u16 number
 --- @within Net
 --- 부호 없는 16비트 정수
-Net.u16 = (({ u16R, u16W } :: RW ) :: any) :: number | u16
+Net.u16 = createBufferRWS(u16R, u16W, 2) :: number | u16
 
 local u32R, u32W =
 	function(): number
@@ -301,14 +244,14 @@ local u32R, u32W =
 				Debugger.warn("Expected 'u32', found floating-point number")
 			end
 		end
-		reserve(4)
-		buffer.writeu32(outgoingBuffer, outgoingBufferApos, value)
+		allocate(4)
+		buffer.writeu32(outgoingBuffer, outgoingBufferAllocatedPosition, value)
 	end
 export type u32 = AdvancedPrimitiveNumber
 --- @prop u32 number
 --- @within Net
 --- 부호 없는 32비트 정수
-Net.u32 = (({ u32R, u32W } :: RW ) :: any) :: number | u32
+Net.u32 = createBufferRWS(u32R, u32W, 4) :: number | u32
 
 local i8R, i8W =
 	function(): number
@@ -321,14 +264,14 @@ local i8R, i8W =
 				Debugger.warn("Expected 'i8', found floating-point number")
 			end
 		end
-		reserve(1)
-		buffer.writei8(outgoingBuffer, outgoingBufferApos, value)
+		allocate(1)
+		buffer.writei8(outgoingBuffer, outgoingBufferAllocatedPosition, value)
 	end
 export type i8 = AdvancedPrimitiveNumber
 --- @prop i8 number
 --- @within Net
 --- 8비트 정수
-Net.i8 = (({ i8R, i8W } :: RW) :: any) :: number | i8
+Net.i8 = createBufferRWS(i8R, i8W, 1) :: number | i8
 
 local i16R, i16W =
 	function(): number
@@ -341,94 +284,66 @@ local i16R, i16W =
 				Debugger.warn("Expected 'i8', found floating-point number")
 			end
 		end
-		reserve(2)
-		buffer.writei16(outgoingBuffer, outgoingBufferApos, value)
+		allocate(2)
+		buffer.writei16(outgoingBuffer, outgoingBufferAllocatedPosition, value)
 	end
 export type i16 = AdvancedPrimitiveNumber
 --- @prop i16 number
 --- @within Net
 --- 16비트 정수
-Net.i16 = (({ i16R, i16W } :: RW) :: any) :: number | i16
+Net.i16 = createBufferRWS(i16R, i16W, 2) :: number | i16
 
 local i32R, i32W =
 	function(): number
 		return buffer.readi32(incomingBuffer, read(4))
 	end, function(value: number)
-		outgoingBufferApos = reserve(4)
-		buffer.writei32(outgoingBuffer, outgoingBufferApos, value)
+		allocate(4)
+		buffer.writei32(outgoingBuffer, outgoingBufferAllocatedPosition, value)
 	end
 export type i32 = AdvancedPrimitiveNumber
 --- @prop i32 number
 --- @within Net
 --- 32비트 정수
-Net.i32 = (({ i32R, i32W } :: RW) :: any) :: number | i32
+Net.i32 = createBufferRWS(i32R, i32W, 4) :: number | i32
 
 local f32R, f32W =
 	function(): number
 		return buffer.readf32(incomingBuffer, read(4))
 	end, function(value: number)
-		outgoingBufferApos = reserve(4)
-		buffer.writef32(outgoingBuffer, outgoingBufferApos, value)
+		allocate(4)
+		buffer.writef32(outgoingBuffer, outgoingBufferAllocatedPosition, value)
 	end
 export type f32 = AdvancedPrimitiveNumber
 --- @prop f32 number
 --- @within Net
 --- 32비트 표준 부동소수점
-Net.f32 = (({ f32R, f32W } :: RW) :: any) :: number | f32
+Net.f32 = createBufferRWS(f32R, f32W, 4) :: number | f32
 
 local f64R, f64W =
 	function(): number
 		return buffer.readf64(incomingBuffer, read(8))
 	end, function(value: number)
-		outgoingBufferApos = reserve(8)
-		buffer.writef64(outgoingBuffer, outgoingBufferApos, value)
+		allocate(8)
+		buffer.writef64(outgoingBuffer, outgoingBufferAllocatedPosition, value)
 	end
 export type f64 = AdvancedPrimitiveNumber
 --- @prop f64 number
 --- @within Net
 --- 64비트 표준 부동소수점
-Net.f64 = (({ f64R, f64W } :: RW) :: any) :: number | f64
-
-local stringR, stringW =
-	function(): string
-		local length = buffer.readu16(incomingBuffer, read(2))
-		return buffer.readstring(incomingBuffer, read(length), length)
-	end, function(value: string)
-		local length = #value
-		outgoingBufferApos = reserve(2)
-		buffer.writeu16(outgoingBuffer, outgoingBufferApos, length)
-		buffer.writestring(outgoingBuffer, length, value)
-	end
---- @prop string string
---- @within Net
---- 부호 없는 16비트 정수의 최대 길이만큼의 길이를 가질 수 있는 문자열
-Net.string = (({ stringR, stringW } :: RW) :: any) :: string
+Net.f64 = createBufferRWS(f64R, f64W, 8) :: number | f64
 
 local boolR, boolW =
 	function(): boolean
 		return buffer.readu8(incomingBuffer, read(1)) == 0
 	end,
 	function(value: boolean)
-		outgoingBufferApos = reserve(1)
-		buffer.writeu8(outgoingBuffer, outgoingBufferApos, if value then 1 else 0)
+		allocate(1)
+		buffer.writeu8(outgoingBuffer, outgoingBufferAllocatedPosition, if value then 1 else 0)
 	end
 --- @prop boolean boolean
 --- @within Net
 --- 8비트를 사용하는 불리언
-Net.boolean = (({ boolR, boolW } :: RW) :: any) :: boolean
-
-local tableR, tableW =
-	function(): { [any]: any }
-		return MsgPack.decode(stringR())
-	end,
-	function(value: { [any]: any })
-		stringW(MsgPack.encode(value))
-	end
---- @prop table { [any]: any }
---- @within Net
---- MessagePack으로 인코딩된 테이블
---- 타입 케스팅을 통해 테이블 타입체킹을 할 수 있습니다.
-Net.table = ({ tableR, tableW } :: RW) :: { [any]: any }
+Net.boolean = createBufferRWS(boolR, boolW, 1) :: boolean
 
 local charR, charW =
 	function(): string
@@ -439,18 +354,7 @@ local charR, charW =
 --- @prop char string
 --- @within Net
 --- 8비트 한 자리 문자
-Net.char = (({ charR, charW } :: RW) :: any) :: string
-
-local bufferR, bufferW =
-	function(): buffer
-		return buffer.fromstring(stringR())
-	end, function(value: buffer)
-		stringW(buffer.tostring(value))
-	end
---- @prop buffer buffer
---- @within Net
---- Luau buffer 데이터 타입
-Net.buffer = (({ bufferR, bufferW } :: RW) :: any) :: buffer
+Net.char = createBufferRWS(charR, charW, 1) :: string
 
 local vector3R, vector3W =
 	function(): Vector3
@@ -460,10 +364,10 @@ local vector3R, vector3W =
 		f32W(value.Y)
 		f32W(value.Z)
 	end
---- @prop vector3 Vector3
+--- @prop Vector3 Vector3
 --- @within Net
 --- 32비트 표준 부동소수점으로 구성된 3차원 벡터 데이터 타입
-Net.vector3 = (({ vector3R, vector3W } :: RW) :: any) :: Vector3
+Net.Vector3 = createBufferRWS(vector3R, vector3W) :: Vector3
 
 local vector3int16R, vector3int16W =
 	function(): Vector3int16
@@ -473,10 +377,10 @@ local vector3int16R, vector3int16W =
 		i16W(value.Y)
 		i16W(value.Z)
 	end
---- @prop vector3int16 Vector3int16
+--- @prop Vector3int16 Vector3int16
 --- @within Net
 --- 16비트 정수로 구성된 3차원 벡터 데이터 타입
-Net.vector3int16 = (({ vector3int16R, vector3int16W } :: RW) :: any) :: Vector3int16
+Net.Vector3int16 = createBufferRWS(vector3int16R, vector3int16W) :: Vector3int16
 
 local vector2R, vector2W =
 	function(): Vector2
@@ -485,10 +389,10 @@ local vector2R, vector2W =
 		f32W(value.X)
 		f32W(value.Y)
 	end
---- @prop vector2 Vector2
+--- @prop Vector2 Vector2
 --- @within Net
 --- 32비트 표준 부동소수점으로 구성된 2차원 벡터 데이터 타입
-Net.vector2 = (({ vector2R, vector2W } :: RW) :: any) :: Vector2
+Net.Vector2 = createBufferRWS(vector2R, vector2W) :: Vector2
 
 local vector2int16R, vector2int16W =
 	function(): Vector2int16
@@ -497,10 +401,10 @@ local vector2int16R, vector2int16W =
 		i16W(value.X)
 		i16W(value.Y)
 	end
---- @prop vector2int16 Vector2int16
+--- @prop Vector2int16 Vector2int16
 --- @within Net
 --- 16비트 정수로 구성된 2차원 벡터 데이터 타입
-Net.vector2int16 = (({ vector2int16R, vector2int16W } :: RW) :: any) :: Vector2int16
+Net.Vector2int16 = createBufferRWS(vector2int16R, vector2int16W) :: Vector2int16
 
 local udimR, udimW =
 	function(): UDim
@@ -510,10 +414,10 @@ local udimR, udimW =
 		f32W(value.Scale)
 		i32W(value.Offset)
 	end
---- @prop udim UDim
+--- @prop UDim UDim
 --- @within Net
 --- UDim 데이터 타입
-Net.udim = (({ udimR, udimW } :: RW) :: any) :: UDim
+Net.UDim = createBufferRWS(udimR, udimW) :: UDim
 
 local udim2R, udim2W =
 	function(): UDim2
@@ -522,10 +426,10 @@ local udim2R, udim2W =
 		udimW(value.X)
 		udimW(value.Y)
 	end
---- @prop udim2 UDim2
+--- @prop UDim2 UDim2
 --- @within Net
 --- UDim2 데이터 타입
-Net.udim2 = (({ udim2R, udim2W } :: RW) :: any) :: UDim2
+Net.UDim2 = createBufferRWS(udim2R, udim2W) :: UDim2
 
 local color3R, color3W =
 	function(): Color3
@@ -535,10 +439,10 @@ local color3R, color3W =
 		f32W(value.G)
 		f32W(value.B)
 	end
---- @prop color3 Color3
+--- @prop Color3 Color3
 --- @within Net
 --- 32비트 표준 부동소수점으로 구성된 Color3 데이터 타입
-Net.color3 = (({ color3R, color3W } :: RW) :: any) :: Color3
+Net.Color3 = createBufferRWS(color3R, color3W) :: Color3
 
 local color3uint8R, color3uint8W =
 	function(): Color3
@@ -548,10 +452,10 @@ local color3uint8R, color3uint8W =
 		u8W(math.floor(value.G * 255))
 		u8W(math.floor(value.B * 255))
 	end
---- @prop color3uint8 Color3
+--- @prop Color3uint8 Color3
 --- @within Net
 --- 부호 없는 8비트 정수로 구성된 Color3 데이터 타입
-Net.color3uint8 = (({ color3uint8R, color3uint8W } :: RW) :: any) :: Color3
+Net.Color3uint8 = createBufferRWS(color3uint8R, color3uint8W) :: Color3
 
 local cframeRotationR, cframeRotationW =
 	function(): CFrame
@@ -583,10 +487,10 @@ local cframeRotationR, cframeRotationW =
 		i32W(elevation)
 	end
 type CFrameRotation = {}
---- @prop cframeRotation CFrame
+--- @prop CFrameRotation CFrame
 --- @within Net
 --- CFrame 회전값
-Net.cframeRotation = (({ cframeRotationR, cframeRotationW } :: RW) :: any) :: CFrame | CFrameRotation
+Net.CFrameRotation = createBufferRWS(cframeRotationR, cframeRotationW) :: CFrame | CFrameRotation
 
 local cframeR, cframeW =
 	function(): CFrame
@@ -598,10 +502,10 @@ local cframeR, cframeW =
 		vector3W(value.Position)
 		cframeRotationW(value)
 	end
---- @prop cframe CFrame
+--- @prop CFrame CFrame
 --- @within Net
 --- CFrame 데이터 타입
-Net.cframe = (({ cframeR, cframeW } :: RW) :: any) :: CFrame
+Net.CFrame = createBufferRWS(cframeR, cframeW) :: CFrame
 
 local brickcolorR, brickcolorW =
 	function(): BrickColor
@@ -609,10 +513,10 @@ local brickcolorR, brickcolorW =
 	end, function(value: BrickColor)
 		u16W(value.Number)
 	end
---- @prop brickColor BrickColor
+--- @prop BrickColor BrickColor
 --- @within Net
 --- 16비트 BrickColor 데이터 타입
-Net.brickColor = (({ brickcolorR, brickcolorW } :: RW) :: any) :: BrickColor
+Net.BrickColor = createBufferRWS(brickcolorR, brickcolorW) :: BrickColor
 
 local numberrangeR, numberrangeW =
 	function(): NumberRange
@@ -621,73 +525,73 @@ local numberrangeR, numberrangeW =
 		f32W(value.Min)
 		f32W(value.Max)
 	end
---- @prop numberRange NumberRange
+--- @prop NumberRange NumberRange
 --- @within Net
 --- NumberRange 데이터 타입
-Net.numberRange = (({ numberrangeR, numberrangeW } :: RW) :: any) :: NumberRange
+Net.NumberRange = createBufferRWS(numberrangeR, numberrangeW) :: NumberRange
 
 local numbersequenceR, numbersequenceW =
 	function(): NumberSequence
 		local count = u32R()
 		local keypoints: { NumberSequenceKeypoint } = table.create(count)
-		for i = 1, count do
+		for _ = 1, count do
 			table.insert(keypoints, NumberSequenceKeypoint.new(f32R(), f32R(), f32R()))
 		end
 		return NumberSequence.new(keypoints)
 	end, function(value: NumberSequence)
 		local keypoints = value.Keypoints
 		u32W(#keypoints)
-		for i, v in keypoints do
+		for _, v in keypoints do
 			f32W(v.Time)
 			f32W(v.Value)
 			f32W(v.Envelope)
 		end
 	end
---- @prop numberSequence NumberSequence
+--- @prop NumberSequence NumberSequence
 --- @within Net
 --- numberSequence 데이터 타입
-Net.numberSequence = (({ numbersequenceR, numbersequenceW } :: RW) :: any) :: NumberSequence
+Net.NumberSequence = createBufferRWS(numbersequenceR, numbersequenceW) :: NumberSequence
 local colorsequenceR, colorsequenceW =
 	function(): ColorSequence
 		local count = u32R()
 		local keypoints: { ColorSequenceKeypoint } = table.create(count)
-		for i = 1, count do
+		for _ = 1, count do
 			table.insert(keypoints, ColorSequenceKeypoint.new(f32R(), color3R()))
 		end
 		return ColorSequence.new(keypoints)
 	end, function(value: ColorSequence)
 		local keypoints = value.Keypoints
 		u32W(#keypoints)
-		for i, v in keypoints do
+		for _, v in keypoints do
 			f32W(v.Time)
 			color3W(v.Value)
 		end
 	end
---- @prop colorSequence ColorSequence
+--- @prop ColorSequence ColorSequence
 --- @within Net
 --- ColorSequence 데이터 타입
-Net.colorSequence = (({ colorsequenceR, colorsequenceW } :: RW) :: any) :: ColorSequence
+Net.ColorSequence = createBufferRWS(colorsequenceR, colorsequenceW) :: ColorSequence
 
 local instanceR, instanceW =
 	function(): Instance
-		incomingInstancePos += 1
-		return incomingInstances[incomingInstancePos]
+		incomingInstancePosition += 1
+		return incomingInstances[incomingInstancePosition]
 	end, function(value: Instance)
 		table.insert(outgoingInstances, value)
 	end
---- @prop instance Instance
+--- @prop Instance Instance
 --- @within Net
 --- 로블록스 인스턴스 데이터 타입
 --- 타입케스팅을 사용하여 인스턴스의 타입을 지정하세요.
-Net.instance = (({ instanceR, instanceW } :: RW) :: any) :: Instance
+Net.Instance = createBufferRWS(instanceR, instanceW) :: Instance
 
-local enumRWs: { [string]: RW } = {}
---- @prop enum Enum
+local enumRWs: { [string]: any } = {}
+--- @prop Enum Enum
 --- @within Net
 --- Enum 데이터 타입
 --- Net.Enum[Enum Name]처럼 인덱싱하여 Enum을 지정하여 사용하세요.
-Net.enum = (setmetatable(enumRWs, {
-	__index = function(self, k: string)
+Net.Enum = (setmetatable(enumRWs, {
+	__index = function(_, k: string)
 		local enum = (Enum :: { [any]: any })[k] :: Enum
 		local items: { EnumItem } = enum:GetEnumItems()
 		local R,W = function(): EnumItem
@@ -703,7 +607,8 @@ Net.enum = (setmetatable(enumRWs, {
 		end, function(value: EnumItem)
 			u16W(value.Value)
 		end
-		rawset(enumRWs, k, {R, W} :: RW)
+		--rawset(enumRWs, k, {R, W} :: RW)
+		return createBufferRWS(R, W)
 	end
 }) :: any) :: typeof(Enum)
 
@@ -741,19 +646,27 @@ Net.definePacket = (function<T>(config: {
 	local packet = {} :: any
 	local from = config.from
 	local reliable = config.reliable
-	local readWriters = config.data --// 싱글, 테이블 가능
-	local isReadWritersTable = type(readWriters) == "table"
+	local struct = config.data --// 싱글, 테이블 가능
 	local packetId: number
+	local unreliableRemoteEvent: UnreliableRemoteEvent
 
-	if from ~= "server" and from ~= "client" then
+	if from ~= "Server" and from ~= "Client" then
 		error(`Packet config 'from' expected 'server' or 'client' got {from}`)
 	end
 	Strict.expect(reliable, "boolean")
+	if type(struct) ~= "table" then
+		error(Strict.ExpectException(struct, "table"))
+	end
 
-	if isServer and from == "server" then
-		local writers = {}
-		for k, v in struct do
-			writers[k] = v[2]
+	if isServer and from == "Server" then
+		local writers: any
+		if Strict.typeof(struct) == "RW" then
+			writers = struct[2]
+		else
+			writers = {}
+			for k, v in struct do
+				writers[k] = v[2]
+			end
 		end
 
 		packet.sendTo = function(player: Player, data: T)
@@ -793,7 +706,7 @@ Net.definePacket = (function<T>(config: {
 				end
 			end
 		end
-	elseif not isServer and from == "client" then
+	elseif not isServer and from == "Client" then
 		local writers = {}
 		for k, v in struct do
 			writers[k] = v[2]
@@ -815,11 +728,15 @@ Net.definePacket = (function<T>(config: {
 
 	end
 
-	packet._init = function(id: number) --// used internally with packet interface
+	packet.reliable = reliable
+	packet._init = function(id: number, cachedUnreliableRemoteEvent: UnreliableRemoteEvent) --// used internally with packet interface
 		if packetId then
 			error("This packet already has been initialized!")
 		end
 		packetId = id
+		if reliable == false then
+			unreliableRemoteEvent = cachedUnreliableRemoteEvent
+		end
 	end
 
 	return table.freeze(packet)
@@ -862,18 +779,61 @@ function Net.defineRawPacket()
 
 end
 
-function Net.String(legnth)
-	local stringR, stringW =
-		function(): string
-			local length = buffer.readu16(incomingBuffer, read(2))
-			return buffer.readstring(incomingBuffer, read(length), length)
-		end, function(value: string)
-			local length = #value
-			outgoingBufferApos = reserve(2)
-			buffer.writeu16(outgoingBuffer, outgoingBufferApos, length)
-			buffer.writestring(outgoingBuffer, 2, value)
-		end
-	return (({ stringR, stringW } :: RW) :: any) :: string
+local cachedStringRWs = {}
+function Net.string(primitiveNumberOrLength: number): string
+	local stringR, stringW
+	local t = Strict.typeof(primitiveNumberOrLength)
+	if t == "BufferRWS" then
+		local byteCount = (primitiveNumberOrLength :: any)[3]
+		stringR, stringW =
+			function(): string
+				local length = buffer.readu16(incomingBuffer, read(byteCount))
+				return buffer.readstring(incomingBuffer, read(length), length)
+			end, function(value: string)
+				local length = #value
+				allocate(byteCount)
+				buffer.writeu16(outgoingBuffer, outgoingBufferAllocatedPosition, length)
+				buffer.writestring(outgoingBuffer, byteCount, value)
+			end
+	elseif t == "number" then
+		stringR, stringW =
+			function(): string
+				return buffer.readstring(incomingBuffer, primitiveNumberOrLength, primitiveNumberOrLength)
+			end, function(value: string)
+				buffer.writestring(outgoingBuffer, primitiveNumberOrLength, value)
+			end
+	end
+	return createBufferRWS(stringR, stringW)
+end
+
+function Net.buffer(primitiveNumberOrLength: number): buffer
+	local bufferR, bufferW
+	local t = Strict.typeof(primitiveNumberOrLength)
+	if t == "BufferRWS" then
+		local byteCount = (primitiveNumberOrLength :: any)[3]
+		bufferR, bufferW =
+			function(): buffer
+				local length = buffer.readu16(incomingBuffer, read(byteCount))
+				return buffer.readstring(incomingBuffer, read(length), length)
+			end, function(value: buffer)
+				local length = #value
+				allocate(byteCount)
+				buffer.writeu16(outgoingBuffer, outgoingBufferAllocatedPosition, length)
+				buffer.writestring(outgoingBuffer, byteCount, value)
+			end
+	elseif t == "number" then
+		bufferR, bufferW =
+			function(): buffer
+				return buffer.readstring(incomingBuffer, primitiveNumberOrLength, primitiveNumberOrLength)
+			end, function(value: buffer)
+				buffer.writestring(outgoingBuffer, primitiveNumberOrLength, value)
+			end
+	end
+	return createBufferRWS(bufferR, bufferW)
+end
+
+function Net.table(length)
+
 end
 
 --[=[
@@ -899,17 +859,23 @@ Net.defineNamespace = (function<T>(name: string, packets: T & { [string]: BasePa
 	if type(packets) ~= "table" then
 		error(Strict.ExpectException(packets, "table"))
 	end
+	local cachedUnreliableRemoteEvent: UnreliableRemoteEvent
 	for _, packet in packets do
 		local id = #packets
-		packet._init(id)
+		if packet.reliable == false and not cachedUnreliableRemoteEvent then
+			cachedUnreliableRemoteEvent = Instance.new("UnreliableRemoteEvent");
+			(cachedUnreliableRemoteEvent :: any).Name = name;
+			(cachedUnreliableRemoteEvent :: any).Parent = unreliableRemoteEventFolder
+		end
+		packet._init(id, cachedUnreliableRemoteEvent)
 		packets[id] = packet
 	end
 	local provider = {}
 	if isServer then
 		provider.server = packets
 		local reliableRemoteEvent = Instance.new("RemoteEvent")
-		reliableRemoteEvent.Name = string.format("%x", eventId)
-		local unreliableRemoteEvent = Instance.new("UnreliableRemoteEvent")
+		reliableRemoteEvent.Name = name
+		reliableRemoteEvent.Parent = script
 		--[=[
 			클라이언트에서 서버로 데이터를 보냈을 때 그 버퍼를 다 읽을 때 까지 반복하여 읽어서
 			이벤트에 연결된 함수들을 실행합니다.
@@ -918,7 +884,7 @@ Net.defineNamespace = (function<T>(name: string, packets: T & { [string]: BasePa
 			incomingBuffer = buff
 			incomingInstances = inst
 			incomingBufferRead = 0
-			incomingInstancePos = 0
+			incomingInstancePosition = 0
 			local len = buffer.len(buff)
 			while incomingBufferRead < len do
 				local id = buffer.readu8(buff, read(1))
@@ -937,27 +903,87 @@ Net.defineNamespace = (function<T>(name: string, packets: T & { [string]: BasePa
 			end
 		end)
 
-		unreliableRemoteEvent.OnServerEvent:Connect(function(player, buff, inst)
+		if cachedUnreliableRemoteEvent then
+			cachedUnreliableRemoteEvent.OnServerEvent:Connect(function(player, buff, inst)
+				incomingBuffer = buff
+				incomingInstances = inst
+				incomingBufferRead = 0
+				incomingInstancePos = 0
+				local id = buffer.readu8(buff, read(1))
+				if id == 1 then --- 여기서 부터 수정 필요
+					local value
+					value = {}
+					local len = buffer.readu16(incomingBuffer, read(2))
+					value.foo = buffer.readstring(incomingBuffer, read(len), len)
+					value.bar = buffer.readu32(incomingBuffer, read(4))
+					for _, cb in events[1] do
+						task.spawn(cb, player, value)
+					end
+				else
+					error("Unknown event id")
+				end
+			end)
+		end
+	else
+		provider.client = packets
+		local reliableRemoteEvent = script:WaitForChild(name, 10) :: RemoteEvent
+		local unreliableRemoteEvent = script:WaitForChild(name, 10) :: UnreliableRemoteEvent
+		--[=[
+			받는건 서버에서 핸들링하는 방식과 비슷함
+		]=]
+		reliableRemoteEvent.OnClientEvent:Connect(function(buff, inst)
+			incomingBuffer = buff
+			incomingInstances = inst
+			incomingBufferRead = 0
+			incomingInstancePos = 0
+			local len = buffer.len(buff)
+			while incomingBufferRead < len do
+				local id = buffer.readu8(buff, read(1))
+				if id == 2 then
+					local value
+					value = {}
+					value.sans = buffer.readu16(incomingBuffer, read(2))
+					if events[2][1] then
+						for _, cb in events[2] do
+							cb(value)
+						end
+					else
+						table.insert(event_queue[2], value)
+						if #event_queue[2] > 64 then
+							warn(`[ZAP] {#event_queue[2]} events in queue for lmao. Did you forget to attach a listener?`)
+						end
+					end
+				else
+					error("Unknown event id")
+				end
+			end
+		end)
+
+		unreliableRemoteEvent.OnClientEvent:Connect(function(buff, inst)
 			incomingBuffer = buff
 			incomingInstances = inst
 			incomingBufferRead = 0
 			incomingInstancePos = 0
 			local id = buffer.readu8(buff, read(1))
-			if id == 1 then --- 여기서 부터 수정 필요
+			if id == 1 then
 				local value
 				value = {}
-				local len = buffer.readu16(incomingBuffer, read(2))
-				value.foo = buffer.readstring(incomingBuffer, read(len), len)
-				value.bar = buffer.readu32(incomingBuffer, read(4))
-				for _, cb in events[1] do
-					task.spawn(cb, player, value)
+				value.foo = buffer.readstring(incoming_buff, read(10), 10)
+				value.bar = buffer.readu32(incoming_buff, read(4))
+				if events[1][1] then
+					for _, cb in events[1] do
+						cb(value)
+					end
+				else
+					table.insert(event_queue[1], value)
+					if #event_queue[1] > 64 then
+						warn(`[ZAP] {#event_queue[1]} events in queue for lol. Did you forget to attach a listener?`)
+					end
 				end
 			else
 				error("Unknown event id")
 			end
 		end)
-	else
-		provider.client = packets
 	end
 
 	return provider

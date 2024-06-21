@@ -6,4 +6,4 @@ realm = "shared"
 
 [dependencies]
 # kit
-strict = "caveful-games/strict@^1.0.0"
+strict = "caveful-games/strict@^0.1.0"
