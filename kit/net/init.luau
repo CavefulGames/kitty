@@ -55,12 +55,12 @@ unreliableRemoteEventFolder.Parent = script
 -- }
 type _1Buff_2Used_3Size_4Inst_5Evnt = { [number]: any }
 
---// $Constants
+--- $Constants
 local EXECEPTION_OUT_OF_RANGE = "Literal out of range for '%s'"
 local EXECEPTION_NEGATIVE_NUMBER = "Cannot apply unary operator '-' to type '%s'"
 local EXECEPTION_FLOATING_NUMBER = "Expected '%s', found floating-point number"
 
---// $PrivateFunctions
+--- $PrivateFunctions
 local function load(data: _1Buff_2Used_3Size_4Inst_5Evnt)
 	outgoingBuffer = data[1]
 	outgoingBufferUsed = data[2]
@@ -120,7 +120,7 @@ local function loadPlayer(player: Player)
 	end
 end
 
---// $Events
+--- $Events
 loadEmpty()
 if isServer then
 	Players.PlayerRemoving:Connect(function(player)
@@ -172,9 +172,7 @@ else
 	end)
 end
 
---// $Streams
---// write (buffer, offset, value)
---// read (buffer, offset)
+--- $BufferRWs
 type AdvancedPrimitiveNumber = { value: number, callback: () -> ()?, doClamp: boolean?, lastSentServerTime: number?, lastWrote: string?, timeTakenToWrite: number?, doRecord: boolean? }
 
 local function createBufferRWS<T>(reader: any, writer: any, size: number?): any
@@ -612,7 +610,7 @@ Net.Enum = (setmetatable(enumRWs, {
 	end
 }) :: any) :: typeof(Enum)
 
---// $PublicFunctions
+--- $PublicFunctions
 type BasePacket<T, P> = {
 	onReceive: Hook.HookedEvent<T>
 } & P
@@ -646,7 +644,7 @@ Net.definePacket = (function<T>(config: {
 	local packet = {} :: any
 	local from = config.from
 	local reliable = config.reliable
-	local struct = config.data --// 싱글, 테이블 가능
+	local struct = config.data -- 싱글, 테이블 가능
 	local packetId: number
 	local unreliableRemoteEvent: UnreliableRemoteEvent
 
@@ -678,7 +676,7 @@ Net.definePacket = (function<T>(config: {
 			for k, v in data do
 				writers[k](v)
 			end
-			if reliable then --// need benchmark: using upvalue is cheaper or using if is cheaper
+			if reliable then -- need benchmark: using upvalue is cheaper or using if is cheaper
 				playerMap[player] = save()
 			else
 				local buff = buffer.create(outgoingBufferUsed)
@@ -697,7 +695,7 @@ Net.definePacket = (function<T>(config: {
 				writers[k](v)
 			end
 			for _, player in Players:GetPlayers() do
-				if reliable then --// need benchmark: using upvalue is cheaper or using if is cheaper
+				if reliable then -- need benchmark: using upvalue is cheaper or using if is cheaper
 					playerMap[player] = save()
 				else
 					local buff = buffer.create(outgoingBufferUsed)
@@ -729,7 +727,7 @@ Net.definePacket = (function<T>(config: {
 	end
 
 	packet.reliable = reliable
-	packet._init = function(id: number, cachedUnreliableRemoteEvent: UnreliableRemoteEvent) --// used internally with packet interface
+	packet._init = function(id: number, cachedUnreliableRemoteEvent: UnreliableRemoteEvent) -- used internally with packet interface
 		if packetId then
 			error("This packet already has been initialized!")
 		end
