@@ -40,5 +40,5 @@ end)
 - definePacket으로 단일 데이터 전송 지원
 - defineRawPacket 구현
 - 한 Namespace 마다 한개의 리모트 이벤트를 사용
-- 페킷 설정값의 from 필드에서 client, server를 Client, Server로 변경
+- ~~페킷 설정값의 from 필드에서 client, server를 Client, Server로 변경~~
 - `moonwave` 주석 작성

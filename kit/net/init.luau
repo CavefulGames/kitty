@@ -133,16 +133,17 @@ if isServer then
 	]=]
 	RunService.Heartbeat:Connect(function()
 		for player, outgoing in playerMap do
-			if outgoing.used > 0 then
-				local buff = buffer.create(outgoing.used)
-				buffer.copy(buff, 0, outgoing.buff, 0, outgoing.used)
+			if outgoing[2] > 0 then
+				local buff = buffer.create(outgoing[2])
+				buffer.copy(buff, 0, outgoing[1], 0, outgoing[2])
 
-				outgoingRemoteEvent:FireClient(player, buff, outgoing.inst)
+				outgoing[5]:FireClient(player, buff, outgoing[4])
 
-				outgoing.buff = buffer.create(64)
-				outgoing.used = 0
-				outgoing.size = 64
-				table.clear(outgoing.inst)
+				outgoing[1] = buffer.create(64)
+				outgoing[2] = 0
+				outgoing[3] = 64
+				table.clear(outgoing[4])
+				outgoing[5] = nil
 			end
 		end
 	end)
@@ -175,11 +176,10 @@ end
 --- $BufferRWs
 type AdvancedPrimitiveNumber = { value: number, callback: () -> ()?, doClamp: boolean?, lastSentServerTime: number?, lastWrote: string?, timeTakenToWrite: number?, doRecord: boolean? }
 
-local function createBufferRWS<T>(reader: any, writer: any, size: number?): any
-	return Strict.ObjectTyped("BufferRWS", {
+local function createBufferRW<T>(reader: any, writer: any): any
+	return Strict.ObjectTyped("BufferRW", {
 		reader,
 		writer,
-		size
 	})
 end
 
@@ -204,7 +204,7 @@ export type u8 = AdvancedPrimitiveNumber
 --- @prop u8 number
 --- @within Net
 --- 부호 없는 8비트 정수
-Net.u8 = createBufferRWS(u8R, u8W, 1) :: number | u8
+Net.u8 = createBufferRW(u8R, u8W) :: number | u8
 
 local u16R, u16W =
 	function(): number
@@ -226,7 +226,7 @@ export type u16 = AdvancedPrimitiveNumber
 --- @prop u16 number
 --- @within Net
 --- 부호 없는 16비트 정수
-Net.u16 = createBufferRWS(u16R, u16W, 2) :: number | u16
+Net.u16 = createBufferRW(u16R, u16W) :: number | u16
 
 local u32R, u32W =
 	function(): number
@@ -249,7 +249,7 @@ export type u32 = AdvancedPrimitiveNumber
 --- @prop u32 number
 --- @within Net
 --- 부호 없는 32비트 정수
-Net.u32 = createBufferRWS(u32R, u32W, 4) :: number | u32
+Net.u32 = createBufferRW(u32R, u32W) :: number | u32
 
 local i8R, i8W =
 	function(): number
@@ -269,7 +269,7 @@ export type i8 = AdvancedPrimitiveNumber
 --- @prop i8 number
 --- @within Net
 --- 8비트 정수
-Net.i8 = createBufferRWS(i8R, i8W, 1) :: number | i8
+Net.i8 = createBufferRW(i8R, i8W) :: number | i8
 
 local i16R, i16W =
 	function(): number
@@ -289,7 +289,7 @@ export type i16 = AdvancedPrimitiveNumber
 --- @prop i16 number
 --- @within Net
 --- 16비트 정수
-Net.i16 = createBufferRWS(i16R, i16W, 2) :: number | i16
+Net.i16 = createBufferRW(i16R, i16W) :: number | i16
 
 local i32R, i32W =
 	function(): number
@@ -302,7 +302,7 @@ export type i32 = AdvancedPrimitiveNumber
 --- @prop i32 number
 --- @within Net
 --- 32비트 정수
-Net.i32 = createBufferRWS(i32R, i32W, 4) :: number | i32
+Net.i32 = createBufferRW(i32R, i32W) :: number | i32
 
 local f32R, f32W =
 	function(): number
@@ -315,7 +315,7 @@ export type f32 = AdvancedPrimitiveNumber
 --- @prop f32 number
 --- @within Net
 --- 32비트 표준 부동소수점
-Net.f32 = createBufferRWS(f32R, f32W, 4) :: number | f32
+Net.f32 = createBufferRW(f32R, f32W) :: number | f32
 
 local f64R, f64W =
 	function(): number
@@ -328,7 +328,7 @@ export type f64 = AdvancedPrimitiveNumber
 --- @prop f64 number
 --- @within Net
 --- 64비트 표준 부동소수점
-Net.f64 = createBufferRWS(f64R, f64W, 8) :: number | f64
+Net.f64 = createBufferRW(f64R, f64W) :: number | f64
 
 local boolR, boolW =
 	function(): boolean
@@ -341,7 +341,7 @@ local boolR, boolW =
 --- @prop boolean boolean
 --- @within Net
 --- 8비트를 사용하는 불리언
-Net.boolean = createBufferRWS(boolR, boolW, 1) :: boolean
+Net.boolean = createBufferRW(boolR, boolW) :: boolean
 
 local charR, charW =
 	function(): string
@@ -352,7 +352,7 @@ local charR, charW =
 --- @prop char string
 --- @within Net
 --- 8비트 한 자리 문자
-Net.char = createBufferRWS(charR, charW, 1) :: string
+Net.char = createBufferRW(charR, charW) :: string
 
 local vector3R, vector3W =
 	function(): Vector3
@@ -365,7 +365,7 @@ local vector3R, vector3W =
 --- @prop Vector3 Vector3
 --- @within Net
 --- 32비트 표준 부동소수점으로 구성된 3차원 벡터 데이터 타입
-Net.Vector3 = createBufferRWS(vector3R, vector3W) :: Vector3
+Net.Vector3 = createBufferRW(vector3R, vector3W) :: Vector3
 
 local vector3int16R, vector3int16W =
 	function(): Vector3int16
@@ -378,7 +378,7 @@ local vector3int16R, vector3int16W =
 --- @prop Vector3int16 Vector3int16
 --- @within Net
 --- 16비트 정수로 구성된 3차원 벡터 데이터 타입
-Net.Vector3int16 = createBufferRWS(vector3int16R, vector3int16W) :: Vector3int16
+Net.Vector3int16 = createBufferRW(vector3int16R, vector3int16W) :: Vector3int16
 
 local vector2R, vector2W =
 	function(): Vector2
@@ -390,7 +390,7 @@ local vector2R, vector2W =
 --- @prop Vector2 Vector2
 --- @within Net
 --- 32비트 표준 부동소수점으로 구성된 2차원 벡터 데이터 타입
-Net.Vector2 = createBufferRWS(vector2R, vector2W) :: Vector2
+Net.Vector2 = createBufferRW(vector2R, vector2W) :: Vector2
 
 local vector2int16R, vector2int16W =
 	function(): Vector2int16
@@ -402,7 +402,7 @@ local vector2int16R, vector2int16W =
 --- @prop Vector2int16 Vector2int16
 --- @within Net
 --- 16비트 정수로 구성된 2차원 벡터 데이터 타입
-Net.Vector2int16 = createBufferRWS(vector2int16R, vector2int16W) :: Vector2int16
+Net.Vector2int16 = createBufferRW(vector2int16R, vector2int16W) :: Vector2int16
 
 local udimR, udimW =
 	function(): UDim
@@ -415,7 +415,7 @@ local udimR, udimW =
 --- @prop UDim UDim
 --- @within Net
 --- UDim 데이터 타입
-Net.UDim = createBufferRWS(udimR, udimW) :: UDim
+Net.UDim = createBufferRW(udimR, udimW) :: UDim
 
 local udim2R, udim2W =
 	function(): UDim2
@@ -427,7 +427,7 @@ local udim2R, udim2W =
 --- @prop UDim2 UDim2
 --- @within Net
 --- UDim2 데이터 타입
-Net.UDim2 = createBufferRWS(udim2R, udim2W) :: UDim2
+Net.UDim2 = createBufferRW(udim2R, udim2W) :: UDim2
 
 local color3R, color3W =
 	function(): Color3
@@ -440,7 +440,7 @@ local color3R, color3W =
 --- @prop Color3 Color3
 --- @within Net
 --- 32비트 표준 부동소수점으로 구성된 Color3 데이터 타입
-Net.Color3 = createBufferRWS(color3R, color3W) :: Color3
+Net.Color3 = createBufferRW(color3R, color3W) :: Color3
 
 local color3uint8R, color3uint8W =
 	function(): Color3
@@ -453,7 +453,7 @@ local color3uint8R, color3uint8W =
 --- @prop Color3uint8 Color3
 --- @within Net
 --- 부호 없는 8비트 정수로 구성된 Color3 데이터 타입
-Net.Color3uint8 = createBufferRWS(color3uint8R, color3uint8W) :: Color3
+Net.Color3uint8 = createBufferRW(color3uint8R, color3uint8W) :: Color3
 
 local cframeRotationR, cframeRotationW =
 	function(): CFrame
@@ -488,7 +488,7 @@ type CFrameRotation = {}
 --- @prop CFrameRotation CFrame
 --- @within Net
 --- CFrame 회전값
-Net.CFrameRotation = createBufferRWS(cframeRotationR, cframeRotationW) :: CFrame | CFrameRotation
+Net.CFrameRotation = createBufferRW(cframeRotationR, cframeRotationW) :: CFrame | CFrameRotation
 
 local cframeR, cframeW =
 	function(): CFrame
@@ -503,7 +503,7 @@ local cframeR, cframeW =
 --- @prop CFrame CFrame
 --- @within Net
 --- CFrame 데이터 타입
-Net.CFrame = createBufferRWS(cframeR, cframeW) :: CFrame
+Net.CFrame = createBufferRW(cframeR, cframeW) :: CFrame
 
 local brickcolorR, brickcolorW =
 	function(): BrickColor
@@ -514,7 +514,7 @@ local brickcolorR, brickcolorW =
 --- @prop BrickColor BrickColor
 --- @within Net
 --- 16비트 BrickColor 데이터 타입
-Net.BrickColor = createBufferRWS(brickcolorR, brickcolorW) :: BrickColor
+Net.BrickColor = createBufferRW(brickcolorR, brickcolorW) :: BrickColor
 
 local numberrangeR, numberrangeW =
 	function(): NumberRange
@@ -526,7 +526,7 @@ local numberrangeR, numberrangeW =
 --- @prop NumberRange NumberRange
 --- @within Net
 --- NumberRange 데이터 타입
-Net.NumberRange = createBufferRWS(numberrangeR, numberrangeW) :: NumberRange
+Net.NumberRange = createBufferRW(numberrangeR, numberrangeW) :: NumberRange
 
 local numbersequenceR, numbersequenceW =
 	function(): NumberSequence
@@ -548,7 +548,8 @@ local numbersequenceR, numbersequenceW =
 --- @prop NumberSequence NumberSequence
 --- @within Net
 --- numberSequence 데이터 타입
-Net.NumberSequence = createBufferRWS(numbersequenceR, numbersequenceW) :: NumberSequence
+Net.NumberSequence = createBufferRW(numbersequenceR, numbersequenceW) :: NumberSequence
+
 local colorsequenceR, colorsequenceW =
 	function(): ColorSequence
 		local count = u32R()
@@ -568,7 +569,7 @@ local colorsequenceR, colorsequenceW =
 --- @prop ColorSequence ColorSequence
 --- @within Net
 --- ColorSequence 데이터 타입
-Net.ColorSequence = createBufferRWS(colorsequenceR, colorsequenceW) :: ColorSequence
+Net.ColorSequence = createBufferRW(colorsequenceR, colorsequenceW) :: ColorSequence
 
 local instanceR, instanceW =
 	function(): Instance
@@ -581,7 +582,7 @@ local instanceR, instanceW =
 --- @within Net
 --- 로블록스 인스턴스 데이터 타입
 --- 타입케스팅을 사용하여 인스턴스의 타입을 지정하세요.
-Net.Instance = createBufferRWS(instanceR, instanceW) :: Instance
+Net.Instance = createBufferRW(instanceR, instanceW) :: Instance
 
 local enumRWs: { [string]: any } = {}
 --- @prop Enum Enum
@@ -606,7 +607,7 @@ Net.Enum = (setmetatable(enumRWs, {
 			u16W(value.Value)
 		end
 		--rawset(enumRWs, k, {R, W} :: RW)
-		return createBufferRWS(R, W)
+		return createBufferRW(R, W)
 	end
 }) :: any) :: typeof(Enum)
 
@@ -779,59 +780,90 @@ end
 
 local cachedStringRWs = {}
 function Net.string(primitiveNumberOrLength: number): string
+	local cache = cachedStringRWs[primitiveNumberOrLength]
+	if cache then
+		return cache
+	end
 	local stringR, stringW
 	local t = Strict.typeof(primitiveNumberOrLength)
-	if t == "BufferRWS" then
-		local byteCount = (primitiveNumberOrLength :: any)[3]
+	if t == "BufferRW" then
+		--local byteCount = (primitiveNumberOrLength :: any)[3]
 		stringR, stringW =
 			function(): string
-				local length = buffer.readu16(incomingBuffer, read(byteCount))
+				local length = (primitiveNumberOrLength :: any)[1]() --buffer.readu16(incomingBuffer, read(byteCount))
 				return buffer.readstring(incomingBuffer, read(length), length)
 			end, function(value: string)
-				local length = #value
-				allocate(byteCount)
-				buffer.writeu16(outgoingBuffer, outgoingBufferAllocatedPosition, length)
-				buffer.writestring(outgoingBuffer, byteCount, value)
+				local length = #value;
+				(primitiveNumberOrLength :: any)[2](length)
+				allocate(length)
+				buffer.writestring(outgoingBuffer, outgoingBufferAllocatedPosition, value)
 			end
 	elseif t == "number" then
 		stringR, stringW =
 			function(): string
-				return buffer.readstring(incomingBuffer, primitiveNumberOrLength, primitiveNumberOrLength)
+				return buffer.readstring(incomingBuffer, read(primitiveNumberOrLength), primitiveNumberOrLength)
 			end, function(value: string)
+				allocate(primitiveNumberOrLength)
 				buffer.writestring(outgoingBuffer, primitiveNumberOrLength, value)
 			end
 	end
-	return createBufferRWS(stringR, stringW)
+	cache = createBufferRW(stringR, stringW)
+	cachedStringRWs[primitiveNumberOrLength] = cache
+	return cache
 end
 
+local cachedBufferRWs = {}
 function Net.buffer(primitiveNumberOrLength: number): buffer
+	local cache = cachedBufferRWs[primitiveNumberOrLength]
+	if cache then
+		return cache
+	end
 	local bufferR, bufferW
 	local t = Strict.typeof(primitiveNumberOrLength)
-	if t == "BufferRWS" then
-		local byteCount = (primitiveNumberOrLength :: any)[3]
+	if t == "BufferRW" then
+		--local byteCount = (primitiveNumberOrLength :: any)[3]
 		bufferR, bufferW =
 			function(): buffer
-				local length = buffer.readu16(incomingBuffer, read(byteCount))
-				return buffer.readstring(incomingBuffer, read(length), length)
+				--local length = buffer.readu16(incomingBuffer, read(byteCount))
+				local length = (primitiveNumberOrLength :: any)[1]
+				return buffer.fromstring(buffer.readstring(incomingBuffer, read(length), length))
 			end, function(value: buffer)
-				local length = #value
-				allocate(byteCount)
-				buffer.writeu16(outgoingBuffer, outgoingBufferAllocatedPosition, length)
-				buffer.writestring(outgoingBuffer, byteCount, value)
+				local length = buffer.len(value);
+				(primitiveNumberOrLength :: any)[2](length)
+				allocate(length)
+				buffer.copy(outgoingBuffer, 0, value, 0)
 			end
 	elseif t == "number" then
 		bufferR, bufferW =
 			function(): buffer
-				return buffer.readstring(incomingBuffer, primitiveNumberOrLength, primitiveNumberOrLength)
+				return buffer.fromstring(buffer.readstring(incomingBuffer, read(primitiveNumberOrLength), primitiveNumberOrLength))
 			end, function(value: buffer)
-				buffer.writestring(outgoingBuffer, primitiveNumberOrLength, value)
+				allocate(primitiveNumberOrLength)
+				buffer.copy(outgoingBuffer, 0, value, 0)
 			end
 	end
-	return createBufferRWS(bufferR, bufferW)
+	cache = createBufferRW(bufferR, bufferW)
+	cachedBufferRWs[primitiveNumberOrLength] = cache
+	return cache
 end
 
-function Net.table(length)
-
+local cachedTableRWs = {}
+function Net.table(primitiveNumberOrLength: number): { [any]: any }
+	local cache = cachedTableRWs[primitiveNumberOrLength]
+	if cache then
+		return cache
+	end
+	local stringRWS = (Net.string(primitiveNumberOrLength) :: any)
+	local stringR, stringW = stringRWS[1], stringRWS[2]
+	local tableR, tableW =
+		function(): { [any]: any }
+			return MsgPack.decode(stringR())
+		end, function(value: { [any]: any })
+			stringW(MsgPack.encode(value))
+		end
+	cache = createBufferRW(tableR, tableW)
+	cachedTableRWs[primitiveNumberOrLength] = cache
+	return cache
 end
 
 --[=[
@@ -906,7 +938,7 @@ Net.defineNamespace = (function<T>(name: string, packets: T & { [string]: BasePa
 				incomingBuffer = buff
 				incomingInstances = inst
 				incomingBufferRead = 0
-				incomingInstancePos = 0
+				incomingInstancePosition = 0
 				local id = buffer.readu8(buff, read(1))
 				if id == 1 then --- 여기서 부터 수정 필요
 					local value
@@ -933,7 +965,7 @@ Net.defineNamespace = (function<T>(name: string, packets: T & { [string]: BasePa
 			incomingBuffer = buff
 			incomingInstances = inst
 			incomingBufferRead = 0
-			incomingInstancePos = 0
+			incomingInstancePosition = 0
 			local len = buffer.len(buff)
 			while incomingBufferRead < len do
 				local id = buffer.readu8(buff, read(1))
@@ -961,7 +993,7 @@ Net.defineNamespace = (function<T>(name: string, packets: T & { [string]: BasePa
 			incomingBuffer = buff
 			incomingInstances = inst
 			incomingBufferRead = 0
-			incomingInstancePos = 0
+			incomingInstancePosition = 0
 			local id = buffer.readu8(buff, read(1))
 			if id == 1 then
 				local value
