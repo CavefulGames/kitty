@@ -1,0 +1,10 @@
+[package]
+name = "caveful-games/rusty"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
+result = "lukadev-0/result@1.0.0"
+# kit
+strict = "caveful-games/strict@^0.1.0"

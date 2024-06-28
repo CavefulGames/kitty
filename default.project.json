@@ -35,6 +35,12 @@
 				"physics": {
 					"$path": "kit/physics"
 				},
+				"queue": {
+					"$path": "kit/queue"
+				},
+				"rusty": {
+					"$path": "kit/rusty"
+				},
 				"strict": {
 					"$path": "kit/strict"
 				},
@@ -43,9 +49,6 @@
 				},
 				"when": {
 					"$path": "kit/when"
-				},
-				"queue": {
-					"$path": "kit/queue"
 				}
 			}
 		}

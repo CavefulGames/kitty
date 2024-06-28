@@ -989,31 +989,33 @@ Net.defineNamespace = (function<T>(name: string, packets: T & { [string]: BasePa
 			end
 		end)
 
-		unreliableRemoteEvent.OnClientEvent:Connect(function(buff, inst)
-			incomingBuffer = buff
-			incomingInstances = inst
-			incomingBufferRead = 0
-			incomingInstancePosition = 0
-			local id = buffer.readu8(buff, read(1))
-			if id == 1 then
-				local value
-				value = {}
-				value.foo = buffer.readstring(incoming_buff, read(10), 10)
-				value.bar = buffer.readu32(incoming_buff, read(4))
-				if events[1][1] then
-					for _, cb in events[1] do
-						cb(value)
+		if cachedUnreliableRemoteEvent then
+			unreliableRemoteEvent.OnClientEvent:Connect(function(buff, inst)
+				incomingBuffer = buff
+				incomingInstances = inst
+				incomingBufferRead = 0
+				incomingInstancePosition = 0
+				local id = buffer.readu8(buff, read(1))
+				if id == 1 then
+					local value
+					value = {}
+					value.foo = buffer.readstring(incoming_buff, read(10), 10)
+					value.bar = buffer.readu32(incoming_buff, read(4))
+					if events[1][1] then
+						for _, cb in events[1] do
+							cb(value)
+						end
+					else
+						table.insert(event_queue[1], value)
+						if #event_queue[1] > 64 then
+							warn(`[ZAP] {#event_queue[1]} events in queue for lol. Did you forget to attach a listener?`)
+						end
 					end
 				else
-					table.insert(event_queue[1], value)
-					if #event_queue[1] > 64 then
-						warn(`[ZAP] {#event_queue[1]} events in queue for lol. Did you forget to attach a listener?`)
-					end
+					error("Unknown event id")
 				end
-			else
-				error("Unknown event id")
-			end
-		end)
+			end)
+		end
 	end
 
 	return provider
