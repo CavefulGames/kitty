@@ -1,5 +1,5 @@
 {
-	"name": "kitty-dev",
+	"name": "kitty-kit",
 	"globIgnorePaths": ["**/*.txt"],
 	"tree":	{
 		"$className": "DataModel",
@@ -7,9 +7,6 @@
 			"$className": "ReplicatedStorage",
 			"packages": {
 				"$path": "Packages",
-				"bricklayer": {
-					"$path": "kit/bricklayer"
-				},
 
 				"debugger": {
 					"$path": "kit/debugger"
@@ -31,9 +28,6 @@
 				},
 				"net": {
 					"$path": "kit/net"
-				},
-				"physics": {
-					"$path": "kit/physics"
 				},
 				"queue": {
 					"$path": "kit/queue"
