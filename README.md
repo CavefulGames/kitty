@@ -21,8 +21,10 @@ Kitty(키티)는 Caveful Games 개발팀에서 관리되고 사용하는 개발 
 # 사용가능한 기능
 아직 많은 기능들이 구현중에 있습니다.
 ## 라이브러리 키트
-- queue
-- strict
+- `queue`
+- `rusty`
+- `strict`
+- `threadpool`
 ## CLI 도구
 - 미완성
 
