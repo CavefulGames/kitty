@@ -5,10 +5,10 @@ registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 
 [dependencies]
-promise = "lukadev-0/typed-promise@4.0.2"
 signal = "sleitnick/signal@2.0.1"
 msgpack-luau = "cipharius/msgpack-luau@0.3.0"
 crc16 = "caveful-games/crc16@^0.1.0"
 reactlua = "jsdotlua/react@17.1.0"
 react-roblox = "jsdotlua/react-roblox@17.1.0"
 result = "lukadev-0/result@1.0.0"
+option = "lukadev-0/option@1.1.0"

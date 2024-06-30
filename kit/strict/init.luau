@@ -185,7 +185,7 @@ end
 function Strict.expectOptional<T>(value: T?, typeName: BasicTypes, ...: string?): never?
 	local t = Strict.typeof(value)
 	if value ~= nil and t ~= typeName then
-		return error(Strict.OptionalExpectException(value, typeName), errorLevel)
+		return error(Strict.OptionalExpectException(value, typeName, ...), errorLevel)
 	end
 	return
 end
@@ -273,27 +273,27 @@ function Strict.createEmptyValue(typeName: BasicTypes, callback: (newValue: any)
 end
 
 --[=[
-	Strict.typeof로 타입을 확인 가능한 타입이 적용된 오브젝트로 변경하여 반환합니다.
+	`Strict.typeof`로 타입을 확인 가능한 타입이 적용된 오브젝트로 변경하여 반환합니다.
 
 	```lua
-	local myTypedObject = Strict.ObjectTyped("Kitty", {
+	local myTypedTable = Strict.TypedTable("Kitty", {
 		name = "kitty"
 	})
-	print(Strict.typeof(myTypedObject)) --- output: "Kitty"
+	print(Strict.typeof(myTypedTable)) --- output: "Kitty"
 	```
 ]=]
-function Strict.ObjectTyped<T>(typeName: BasicTypes, t: T?): T
-	Strict.Tuple.new():expect(typeName, "string"):expectOptional(t, "table")
-	if type(t) ~= "table" then
-		error(Strict.ExpectException(t, "table"))
+function Strict.TypedTable<T>(typeName: BasicTypes, tbl: T?): T
+	Strict.Tuple.new():expect(typeName, "string"):expectOptional(tbl, "table")
+	if type(tbl) ~= "table" then
+		error(Strict.ExpectException(tbl, "table"))
 	end
-	local tbl = t or {}
+	tbl = tbl or {}
 	tbl[typeKey] = typeName
 	return tbl
 end
 
 --[=[
-	TypedObject를 포합하여 주어진 값의 타입을 반환합니다.
+	`TypedTable`를 포합하여 주어진 값의 타입을 반환합니다.
 
 	```lua
 	assert(Strict.typeof(123) == typeof(123))
@@ -308,6 +308,22 @@ function Strict.typeof(value: any): string
 		end
 	end
 	return typeName
+end
+
+--[=[
+	`Strict.TypedTable`로 지정된 타입을 제거합니다.
+
+	```lua
+	local t = Strict.TypedTable("kitty")
+	Strict.removeType(t)
+	assert(Strict.typeof(t) == "table")
+	```
+]=]
+function Strict.removeType<T>(typedTable: T)
+	if type(typedTable) ~= "table" then
+		error(Strict.ExpectException(typedTable, "table"))
+	end
+	typedTable[typeKey] = nil
 end
 
 return Strict.Capsule(Strict)

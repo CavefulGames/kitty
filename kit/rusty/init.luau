@@ -1,354 +1,238 @@
---- Option & Result credit to https://github.com/lukadev-0/util.luau
---- removed Option.join
-
+--!strict
 --# selene: allow(mixed_table)
 
-export type Option<T...> = typeof(setmetatable(
+--- $Kit
+local Strict = require(script.Parent.strict)
+local ThreadPool = require(script.Parent.threadpool)
+-- @class Rusty
+local Rusty = {}
+
+--- $Packages
+local Option = require(script.Parent.option)
+local Result = require(script.Parent.result)
+
+export type Future<T...> = typeof(setmetatable(
 	{} :: {
-		-- value to "store" T...
-		-- this value doesn't exist at runtime, and is only used for typechecking
-		_T: (T...) -> (),
-		_n: number,
+		_v: {
+			n: number
+		}?,
+		_w: { thread },
+		_c: { (T...) -> () },
 	},
-	{} :: OptionImpl
+	{} :: FutureImpl
 ))
 
-export type OptionImpl = {
-	__index: OptionImpl,
-	__tostring: <T...>(self: Option<T...>) -> string,
-	__eq: <T...>(self: Option<T...>, other: Option<T...>) -> boolean,
+type FutureImpl = {
+	__index: FutureImpl,
 
-	None: Option<...any>,
-	Some: <T...>(T...) -> Option<T...>,
-	from: <T>(value: T?) -> Option<T>,
-	is: (value: unknown) -> boolean,
-	isSome: <T...>(self: Option<T...>) -> boolean,
-	isSomeAnd: <T...>(self: Option<T...>, f: (T...) -> boolean) -> boolean,
-	isNone: <T...>(self: Option<T...>) -> boolean,
-	expect: <T...>(self: Option<T...>, message: string) -> T...,
-	unwrap: <T...>(self: Option<T...>) -> T...,
-	unwrapOr: <T...>(self: Option<T...>, T...) -> T...,
-	unwrapOrElse: <T...>(self: Option<T...>, f: () -> T...) -> T...,
-	unwrapOrNil: <T...>(self: Option<T...>) -> T...?,
-	map: <T..., U...>(self: Option<T...>, f: (T...) -> U...) -> Option<U...>,
-	mapOr: <U, T...>(self: Option<T...>, default: U, f: (T...) -> U) -> U,
-	mapOrRest: <T..., U...>(self: Option<T...>, f: (T...) -> U..., U...) -> U...,
-	mapOrElse: <T..., U...>(self: Option<T...>, default: () -> U..., f: (T...) -> U...) -> U...,
-	andOpt: <T..., U...>(self: Option<T...>, other: Option<U...>) -> Option<U...>,
-	andThen: <T..., U...>(self: Option<T...>, f: (T...) -> Option<U...>) -> Option<U...>,
-	filter: <T...>(self: Option<T...>, f: (T...) -> boolean) -> Option<T...>,
-	orOpt: <T...>(self: Option<T...>, other: Option<T...>) -> Option<T...>,
-	orElse: <T...>(self: Option<T...>, f: () -> Option<T...>) -> Option<T...>,
-	xor: <T...>(self: Option<T...>, other: Option<T...>) -> Option<T...>,
-	match: <T..., U...>(self: Option<T...>, f: { Some: (T...) -> U..., None: () -> U... }) -> U...,
+	ready: <T0...>(T0...) -> Future<T0...>,
+	never: () -> Future<...any>,
+	spawn: <T1..., U0...>(f: (U0...) -> T1..., U0...) -> Future<T1...>,
+	pending: <T2...>() -> (Future<T2...>, (T2...) -> ()),
+
+	join: FutureJoin,
+	joinAll: (futures: { Future<...any> }) -> Future<{ any }>,
+	race: (futures: { Future<...any> }) -> Future<...any>,
+
+	isReady: <T3...>(self: Future<T3...>) -> boolean,
+	isPending: <T4...>(self: Future<T4...>) -> boolean,
+	now: <T5...>(self: Future<T5...>) -> Option.Option<T5...>,
+	await: <T6...>(self: Future<T6...>) -> T6...,
+	after: <T>(self: Future<T>, f: (T) -> ()) -> (),
 }
 
---[=[
-	@class Option
-
-	Represents an optional value: `Some` and contains a value, or `None`
-	and does not contain a value.
-
-	Options can be used as an alternative to `nil` to represent the
-	absence of a value. They help you avoid bugs by requiring you to
-	handle the case where a value might be missing.
-]=]
-local Option = {} :: OptionImpl
-Option.__index = Option
-
---[=[
-	The `Option` that does not contain a value.
-]=]
-Option.None = table.freeze(setmetatable({ _n = 0 }, Option) :: any)
+type FutureJoin =
+			(<T1, U1...>(future1: Future<T1>, future2: Future<U1...>) -> Future<(T1, U1...)>)
+		& (<T1, T2, U2...>(future1: Future<T1, T2>, future2: Future<U2...>) -> Future<(T1, T2, U2...)>)
+		& (<T1, T2, T3, U3...>(future1: Future<T1, T2, T3>, future2: Future<U3...>) -> Future<(T1, T2, T3, U3...)>)
+		& (<T1, T2, T3, T4, U4...>(future1: Future<T1, T2, T3, T4>, future2: Future<U4...>) -> Future<(T1, T2, T3, T4, U4...)>)
+		& (<T1, T2, T3, T4, T5, U5...>(future1: Future<T1, T2, T3, T4, T5>, future2: Future<U5...>) -> Future<(T1, T2, T3, T4, T5, U5...)>)
+		& (<T1, T2, T3, T4, T5, T6, U6...>(future1: Future<T1, T2, T3, T4, T5, T6>, future2: Future<U6...>) -> Future<(T1, T2, T3, T4, T5, T6, U6...)>)
+		& (<T1, T2, T3, T4, T5, T6, T7, U7...>(future1: Future<T1, T2, T3, T4, T5, T6, T7>, future2: Future<U7...>) -> Future<(T1, T2, T3, T4, T5, T6, T7, U7...)>)
+		& (<T1, T2, T3, T4, T5, T6, T7, T8, U8...>(future1: Future<T1, T2, T3, T4, T5, T6, T7, T8>, future2: Future<U8...>) -> Future<(T1, T2, T3, T4, T5, T6, T7, T8, U8...)>)
+		& (<T1, T2, T3, T4, T5, T6, T7, T8, T9, U9...>(future1: Future<T1, T2, T3, T4, T5, T6, T7, T8, T9>, future2: Future<U9...>) -> Future<(T1, T2, T3, T4, T5, T6, T7, T8, T9, U9...)>)
+		& (<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, U10...>(future1: Future<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, future2: Future<U10...>) -> Future<(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, U10...)>)
+		& (<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, U11...>(future1: Future<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, future2: Future<U11...>) -> Future<(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, U11...)>)
+		& (<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, U12...>(future1: Future<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, future2: Future<U12...>) -> Future<(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, U12...)>)
 
 --[=[
-	Creates a new `Some` with the given value.
+	@class Future
+
+	A future represents a value that does not exist yet, but will exist at some
+	point in the future.
+
+	Futures allow you to more easily compose asynchronous operations.
 ]=]
-function Option.Some(...)
-	local n = select("#", ...)
-	if n == 0 then
-		error("Option.Some() called with no arguments", 2)
-	end
-	local self = setmetatable({ _n = n, ... }, Option)
-	return table.freeze(self) :: any
+local Future = {} :: FutureImpl
+Future.__index = Future
+
+--[=[
+	Creates a finished future with the given value.
+]=]
+function Future.ready(...)
+	local self = setmetatable({ _f = true, _v = table.pack(...), _w = {}, _c = {} }, Future)
+	return self
 end
 
 --[=[
-	Converts the given value to an `Option`, returning `None` if the
-	value is `nil`.
+	Creates a future that will never finish.
 ]=]
-function Option.from(value)
-	if value == nil then
-		return Option.None
-	else
-		return Option.Some(value) :: any
-	end
+function Future.never()
+	return setmetatable({ _w = {}, _c = {} }, Future)
 end
 
---[=[
-	Returns `true` if the given value is an `Option`.
-]=]
-function Option.is(value)
-	return typeof(value) == "table" and getmetatable(value :: any) == Option
-end
+local function finish<T...>(fut: Future<T...>, ...: T...)
+	fut._v = table.pack(...)
 
---[=[
-	Returns `true` if the option is a `Some` value.
-]=]
-function Option.isSome(self)
-	return self._n ~= 0
-end
-
---[=[
-	Returns `true` if the option is a `Some` value and the value
-	satisfies the given predicate.
-]=]
-function Option.isSomeAnd(self, f)
-	return self._n ~= 0 and f(unpack(self :: any))
-end
-
---[=[
-	Returns `true` if the option is a `None` value.
-]=]
-function Option.isNone(self): boolean
-	return self._n == 0
-end
-
---[=[
-	Returns the value of the option if it is `Some`, otherwise throws
-	an error with the given message.
-]=]
-function Option.expect(self, message)
-	if self._n == 0 then
-		error(message, 2)
-	end
-	return unpack(self :: any)
-end
-
---[=[
-	Returns the value of the option if it is `Some`, otherwise throws
-	an error.
-]=]
-function Option.unwrap(self)
-	if self._n == 0 then
-		error("called `Option.unwrap()` on a `None` value", 2)
-	end
-	return unpack(self :: any)
-end
-
---[=[
-	Returns the value of the option if it is `Some`, otherwise returns
-	the given default value.
-]=]
-function Option.unwrapOr(self, ...)
-	if self._n == 0 then
-		return ...
-	end
-	return unpack(self :: any)
-end
-
---[=[
-	Returns the value of the option if it is `Some`, otherwise returns
-	the result of calling the given function.
-]=]
-function Option.unwrapOrElse(self, f)
-	if self._n == 0 then
-		return f()
-	end
-	return unpack(self :: any)
-end
-
---[=[
-	Returns the value of the option if it is `Some`, otherwise returns
-	`nil`. Only works with `Option`s that contain a single value.
-]=]
-function Option.unwrapOrNil(self)
-	return self[1]
-end
-
---[=[
-	Returns the result of the given function wrapped in an `Option` if
-	the option is `Some`, otherwise returns `None`.
-]=]
-function Option.map(self, f)
-	if self._n == 0 then
-		return Option.None
-	end
-	return Option.Some(f(unpack(self :: any)))
-end
-
---[=[
-	Returns the result of the given function if the option is `Some`,
-	otherwise returns the given default value.
-]=]
-function Option.mapOr(self, default, f)
-	if self._n == 0 then
-		return default
-	end
-	return f(unpack(self :: any))
-end
-
---[=[
-	Returns the result of the given function if the option is `Some`,
-	otherwise returns the rest of the arguments.
-]=]
-function Option.mapOrRest(self, f, ...)
-	if self._n == 0 then
-		return ...
-	end
-	return f(unpack(self :: any))
-end
-
---[=[
-	Returns the result of the given function if the option is `Some`,
-	otherwise returns the result of calling the default function.
-]=]
-function Option.mapOrElse(self, default, f)
-	if self._n == 0 then
-		return default()
-	end
-	return f(unpack(self :: any))
-end
-
---[=[
-	Returns `None` if the option is `None`, otherwise returns the other option.
-]=]
-function Option.andOpt(self, other)
-	if self._n == 0 then
-		return Option.None
-	end
-	return other
-end
-
---[=[
-	Returns `None` if the option is `None`, otherwise calls the given
-	function with the value of the option and returns the result.
-]=]
-function Option.andThen(self, f)
-	if self._n == 0 then
-		return Option.None
-	end
-	return f(unpack(self :: any))
-end
-
---[=[
-	Returns `None` if the option is `None`, otherwise calls the given
-	function with the value:
-	- if the function returns `true`, returns the original option
-	- if the function returns `false`, returns `None`
-]=]
-function Option.filter(self, f)
-	if self._n == 0 then
-		return Option.None
-	end
-	if f(unpack(self :: any)) then
-		return self
-	end
-	return Option.None
-end
-
---[=[
-	Returns the option if it is `Some`, otherwise returns
-	the other option.
-]=]
-function Option.orOpt(self, other)
-	if self._n ~= 0 then
-		return self
-	end
-	return other
-end
-
---[=[
-	Returns the option if it is `Some`, otherwise returns
-	the result of calling the given function.
-]=]
-function Option.orElse(self, f)
-	if self._n ~= 0 then
-		return self
-	end
-	return f()
-end
-
---[=[
-	Returns `Some` if exactly one of the options is `Some`, otherwise
-	returns `None`.
-]=]
-function Option.xor(self, other)
-	if self._n == 0 then
-		return other
-	end
-	if other._n == 0 then
-		return self
-	end
-	return Option.None
-end
-
---[=[
-	Takes a table containing a `Some` and `None` function. If the option
-	is a `Some`, calls the `Some` function with the value of the option,
-	otherwise calls the `None` function. The result of the function call
-	is returned.
-]=]
-function Option.match(self, f)
-	if self._n ~= 0 then
-		return f.Some(unpack(self :: any))
-	end
-	return f.None()
-end
-
---[=[
-	Converts the given option to a string.
-]=]
-function Option.__tostring(self)
-	if self._n ~= 0 then
-		local s = ""
-		for i = 1, self._n do
-			if i > 1 then
-				s ..= ", "
-			end
-
-			local v = self[i]
-			if typeof(v) == "string" then
-				s ..= string.format("%q", v)
-			else
-				s ..= tostring(v)
-			end
-		end
-
-		return `Option::Some({s})`
-	else
-		return "Option::None"
-	end
-end
-
---[=[
-	Returns `true` if the given value is an `Option` and contains the
-	same value as this option, `false` otherwise.
-]=]
-function Option.__eq(self, other)
-	if Option.is(other) then
-		if self._n == 0 and other._n == 0 then
-			return true
-		elseif self._n == 1 and other._n == 1 then
-			return self[1] == other[1]
-		elseif self._n == other._n then
-			for i = 1, self._n do
-				if self[i] ~= other[i] then
-					return false
-				end
-			end
-			return true
+	for _, thread in fut._w do
+		if coroutine.status(thread) == "suspended" then
+			coroutine.resume(thread, ...)
 		end
 	end
-	return false
+
+	for _, callback in fut._c do
+		ThreadPool.spawn(callback, ...)
+	end
 end
 
-local Future = {}
+--[=[
+	Creates a future and spawns the given function in a new thread, once the
+	function finishes, the future resolves with the result of the function.
+]=]
+function Future.spawn(f, ...)
+	local function inner(self: Future<any>, fn: (...any) -> any, ...)
+		finish(self, fn(...))
+	end
+	local self = Future.never()
+	ThreadPool.spawn(inner, self, f :: any, ...)
 
-local Strict = require(script.Parent.strict)
+	return self
+end
 
-return {
-	Option = Option,
-	Result = require(script.Parent.result),
-	Future = Future,
-}
+--[=[
+	Creates a future that is pending, and returns the future and a function that
+	can be used to resolve the future with a value.
+]=]
+function Future.pending()
+	local fut = Future.never()
+	return fut, function(...)
+		finish(fut, ...)
+	end
+end
+
+Future.join = function(future1, future2)
+	local function inner(fut1, fut2)
+		return fut1:await(), fut2:await()
+	end
+	return Future.spawn(inner, future1, future2) :: any
+end :: any
+
+--[=[
+	Takes an array of futures and returns a new future that will finish once all
+	of the given futures have finished. The future will resolve with an array
+	containing the results of the given futures.
+]=]
+function Future.joinAll(futures)
+	local function inner(futs: { Future<any> })
+		local result = table.create(#futs)
+		for _, fut: any in futs do
+			table.insert(result, fut:await())
+		end
+		return result
+	end
+	return Future.spawn(inner, futures) :: any
+end
+
+--[=[
+	Takes an array of futures and returns a new future that will finish once any
+	of the given futures have finished. The future will resolve with the result
+	of the first future to finish.
+
+	The result of the other futures will be discarded.
+]=]
+function Future.race(futures)
+	local self = Future.never()
+	local done = false
+
+	for _, fut: any in futures do
+		fut:after(function(val)
+			if done then
+				return
+			end
+
+			done = true
+			finish(self, val)
+		end)
+	end
+
+	return self
+end
+
+--[=[
+	Returns `true` if the future has finished, `false` otherwise.
+]=]
+function Future.isReady(self)
+	return self._v ~= nil
+end
+
+--[=[
+	Returns `true` if the future is still pending, `false` otherwise.
+]=]
+function Future.isPending(self)
+	return self._v == nil
+end
+
+--[=[
+	Returns the value of the future, if it has finished. If the future is still
+	pending, the function will return `None`.
+]=]
+function Future.now(self)
+	if self._v then
+		return Option.Some(table.unpack(self._v)) :: any
+	else
+		return Option.None
+	end
+end
+
+--[=[
+	Yields the current thread until the future has finished, then returns the
+	value of the future.
+
+	If the future has already finished, the function will return immediately.
+]=]
+Future.await = function(self)
+	if self._v then
+		return table.unpack(self._v)
+	end
+
+	local thread = coroutine.running()
+	table.insert(self._w, thread)
+	return coroutine.yield()
+end :: any
+
+--[=[
+	Calls the given callback once the future has finished. If the future has
+	already finished, the callback will be called immediately.
+]=]
+function Future.after(self, f)
+	if self._v then
+		f(table.unpack(self._v :: any))
+	else
+		table.insert(self._c, f)
+	end
+end
+
+Rusty.Ok = Result.Ok
+;(Result :: any).Ok = nil
+Rusty.Err = Result.Err
+;(Result :: any).Err = nil
+Rusty.async = function(f)
+	return function(...)
+		return Future.spawn(f, ...)
+	end
+end :: <T, V...>(f: (V...) -> T) -> (V...) -> Future<T>
+Rusty.Option = Option
+Rusty.Result = Result
+Rusty.Future = Future
+
+return Strict.Capsule(Rusty)

@@ -6,5 +6,6 @@ realm = "shared"
 
 [dependencies]
 result = "lukadev-0/result@1.0.0"
+option = "lukadev-0/option@1.1.0"
 # kit
 strict = "caveful-games/strict@^0.1.0"

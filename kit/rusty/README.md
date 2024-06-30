@@ -1,5 +1,5 @@
 # Rusty
-러스트 문법에서 영감을 얻은 오류 핸들링(Result), 선택적 값 핸들링(Option), 비동기 작업(Future)에 유용한 유틸리티 모음
+러스트의 `Option`, `Result`, `Future`, `tokio` 에서 영감을 얻은 오류 핸들링(Result), 선택적 값 핸들링(Option), 비동기 작업(Future)에 유용한 유틸리티 모음
 
 # 특징
 - 오리지널 소스는 [util.luau](https://github.com/lukadev-0/util.luau)

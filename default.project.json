@@ -32,11 +32,17 @@
 				"queue": {
 					"$path": "kit/queue"
 				},
+				"rbxform": {
+					"$path": "kit/rbxform"
+				},
 				"rusty": {
 					"$path": "kit/rusty"
 				},
 				"strict": {
 					"$path": "kit/strict"
+				},
+				"threadpool": {
+					"$path": "kit/threadpool"
 				},
 				"userconfig": {
 					"$path": "kit/userconfig"

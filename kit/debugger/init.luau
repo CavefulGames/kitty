@@ -20,9 +20,9 @@ Debugger.silent = setmetatable({}, {
 		return if isStudio then Debugger[k] else dummySilentFunction
 	end
 })
-Debugger.enabled = Strict.Mutable(isStudio)
-Debugger.visible = Strict.Mutable(true)
-Debugger.fatalErrorMessage = Strict.Mutable("\nA fatal error has occurred: [%s] %s\nWe're sorry for the inconvenience, but you have been kicked out to protect your data safety. An error report has been successfully submitted.")
+Debugger.enabled = Strict.createValue(isStudio)
+Debugger.visible = Strict.createValue(true)
+Debugger.fatalErrorMessage = Strict.createValue("\nA fatal error has occurred: [%s] %s\nWe're sorry for the inconvenience, but you have been kicked out to protect your data safety. An error report has been successfully submitted.")
 
 local function getTag(): string
 	local scriptName = debug.traceback(nil, 3):gsub("\n", ""):match("[^.]+%.(.-):%d+$")
@@ -85,26 +85,6 @@ function Debugger.fatal(message: string)
 	else
 		Players.LocalPlayer:Kick(Debugger.fatalErrorMessage():format(info, message))
 	end
-end
-
-local function resultHandler(co: thread, ok: boolean, ...)
-	if not ok then
-		local err = (...)
-		if typeof(err) == "string" then
-			error(debug.traceback(co, err), 2)
-		else
-			-- If the error is not of type string, just assume it has some
-			-- meaningful information and rethrow it with a `tostring` so that
-			-- top-level error handlers can process it
-			error(tostring(err), 2)
-		end
-	end
-
-	if coroutine.status(co) ~= "dead" then
-		error(debug.traceback(co, "Attempted to yield inside NoYield-wrapped function!"), 2)
-	end
-
-	return ...
 end
 
 return Strict.Capsule(Debugger)

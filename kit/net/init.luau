@@ -4,7 +4,6 @@
 --- *RW = Reader & Writer
 
 --- $Kit
-local Hook = require(script.Parent.hook)
 local Debugger = require(script.Parent.debugger)
 local Strict = require(script.Parent.strict)
 --- @class Net
@@ -14,6 +13,7 @@ local Net = {}
 local MsgPack = require(script.Parent["msgpack-luau"])
 local Promise = require(script.Parent.promise)
 local CRC16 = require(script.Parent.crc16)
+local LimeSignal = require(script.Parent.limesignal)
 
 --- $Services
 local RunService = game:GetService("RunService")
@@ -177,7 +177,7 @@ end
 type AdvancedPrimitiveNumber = { value: number, callback: () -> ()?, doClamp: boolean?, lastSentServerTime: number?, lastWrote: string?, timeTakenToWrite: number?, doRecord: boolean? }
 
 local function createBufferRW<T>(reader: any, writer: any): any
-	return Strict.ObjectTyped("BufferRW", {
+	return Strict.TypedTable("BufferRW", {
 		reader,
 		writer,
 	})
@@ -625,120 +625,30 @@ type PacketSendableFromClient<T> = {
 }
 
 --[=[
-	PacketProvider에 새로운 페킷을 정의합니다.
+	`Namespace`에 새로운 페킷을 정의합니다.
+
+	타입 체킹과 자동완성을 위해 존재합니다.
 
 	```lua
-	Net.definePacket {
+	Net.Packet {
 		from = "Server",
 		reliable = true,
-		struct = {
+		data = {
 			exampleParam = Net.u32
 		}
 	}
 	```
 ]=]
-Net.definePacket = (function<T>(config: {
+Net.Packet = (function<T>(config: {
 	from: "Server" | "Client",
 	reliable: boolean,
 	data: T
 })
-	local packet = {} :: any
-	local from = config.from
-	local reliable = config.reliable
-	local struct = config.data -- 싱글, 테이블 가능
-	local packetId: number
-	local unreliableRemoteEvent: UnreliableRemoteEvent
-
-	if from ~= "Server" and from ~= "Client" then
-		error(`Packet config 'from' expected 'server' or 'client' got {from}`)
+	if config.from ~= "Server" and config.from ~= "Client" then
+		error(`Packet config 'from' expected 'Server' or 'Client' got {config.from}`)
 	end
-	Strict.expect(reliable, "boolean")
-	if type(struct) ~= "table" then
-		error(Strict.ExpectException(struct, "table"))
-	end
-
-	if isServer and from == "Server" then
-		local writers: any
-		if Strict.typeof(struct) == "RW" then
-			writers = struct[2]
-		else
-			writers = {}
-			for k, v in struct do
-				writers[k] = v[2]
-			end
-		end
-
-		packet.sendTo = function(player: Player, data: T)
-			if type(data) ~= "table" then
-				error(Strict.ExpectException(data, "table"))
-			end
-			loadEmpty()
-			u8W(packetId)
-			for k, v in data do
-				writers[k](v)
-			end
-			if reliable then -- need benchmark: using upvalue is cheaper or using if is cheaper
-				playerMap[player] = save()
-			else
-				local buff = buffer.create(outgoingBufferUsed)
-				buffer.copy(buff, 0, outgoingBuffer, 0, outgoingBufferUsed)
-				unreliableRemoteEvent:FireClient(player, buff, outgoingInstances)
-			end
-		end
-
-		packet.broadcast = function(data: T)
-			if type(data) ~= "table" then
-				error(Strict.ExpectException(data, "table"))
-			end
-			loadEmpty()
-			u8W(packetId)
-			for k, v in data do
-				writers[k](v)
-			end
-			for _, player in Players:GetPlayers() do
-				if reliable then -- need benchmark: using upvalue is cheaper or using if is cheaper
-					playerMap[player] = save()
-				else
-					local buff = buffer.create(outgoingBufferUsed)
-					buffer.copy(buff, 0, outgoingBuffer, 0, outgoingBufferUsed)
-					unreliableRemoteEvent:FireClient(player, buff, outgoingInstances)
-				end
-			end
-		end
-	elseif not isServer and from == "Client" then
-		local writers = {}
-		for k, v in struct do
-			writers[k] = v[2]
-		end
-
-		packet.sendToServer = function(data: T)
-			if type(data) ~= "table" then
-				error(Strict.ExpectException(data, "table"))
-			end
-			loadEmpty()
-			u8W(packetId)
-			for k, v in data do
-				writers[k](v)
-			end
-		end
-	else
-		local readers = {}
-		packet.onReceive = Hook() :: Hook.HookedEvent<T>
-
-	end
-
-	packet.reliable = reliable
-	packet._init = function(id: number, cachedUnreliableRemoteEvent: UnreliableRemoteEvent) -- used internally with packet interface
-		if packetId then
-			error("This packet already has been initialized!")
-		end
-		packetId = id
-		if reliable == false then
-			unreliableRemoteEvent = cachedUnreliableRemoteEvent
-		end
-	end
-
-	return table.freeze(packet)
+	Strict.expect(config.reliable, "boolean")
+	return Strict.TypedTable("Packet", config)
 end :: any) :: (<T>(config: {
 	from: "Client",
 	reliable: boolean,
@@ -750,13 +660,15 @@ end :: any) :: (<T>(config: {
 }) -> BasePacket<T, PacketSendableFromServer<T>>)
 
 --[=[
-	PacketProvider에 새로운 페킷을 정의합니다.
-	definePacket()과 같이 자동으로 (역)직렬화를 수행하지 않습니다.
+	`Namespace`에 새로운 페킷을 정의합니다.
+	`Net.Packet()`과 다르게 (역)직렬화를 수행하지 않습니다.
 
 	수동으로 (역)직렬화를 구현하여 더 빠르게 페킷을 보낼 있는 상황에 적합합니다.
 
+	타입 체킹과 자동완성을 위해 존재합니다.
+
 	```lua
-	Net.defineRawPacket({
+	Net.RawPacket({
 		from = "Client",
 		reliable = true,
 		dataType = {
@@ -774,7 +686,7 @@ end :: any) :: (<T>(config: {
 	})
 	```
 ]=]
-function Net.defineRawPacket()
+function Net.RawPacket()
 
 end
 
@@ -867,37 +779,126 @@ function Net.table(primitiveNumberOrLength: number): { [any]: any }
 end
 
 --[=[
-	페킷 집합 단위를 결정하는 네임스페이스를 정의합니다.
-	키벨류를 통하여 페킷의 이름을 설정할 수 있습니다.
-	같은 참조를 통하여 서버/클라이언트가 상호작용하므로 한 모듈에 정의하는 것이 적절합니다.
+	페킷 집합 단위를 결정하는 네임스페이스를 정의하며, 키값을 설정하여 페킷의 이름을 설정할 수 있습니다.
+
+	같은 참조를 통하여 서버/클라이언트가 상호작용하므로 한 모듈에 정의하는 것이 적합합니다.
 
 	서버 사이드에서는 server, 클라이언트 사이드에서는 client 필드에 반환됩니다.
 
 	```lua
-	Net.defineNamespace("MyNetworking", {
-		ExamplePacketName = Net.definePacket({
+	Net.defineNamespace("MyNetwork", {
+		ExamplePacketName = Net.Packet({
 			from = "Client",
 			reliable = true,
-			struct = {
+			data = {
 				exampleParam = Net.u32
 			}
 		})
 	})
 	```
 ]=]
-Net.defineNamespace = (function<T>(name: string, packets: T & { [string]: BasePacket<any, any> })
+Net.defineNamespace = (function<T>(name: string, packets: T & { [string]: BasePacket<any, any> }) -- 이게 핵심 기능임
 	if type(packets) ~= "table" then
 		error(Strict.ExpectException(packets, "table"))
 	end
 	local cachedUnreliableRemoteEvent: UnreliableRemoteEvent
-	for _, packet in packets do
+	local readClosures: { () -> ()? } = {}
+	for _, packet: { from: "Server" | "Client", reliable: boolean, data: any, [any]: any } in packets do -- 패킷 초기화 및 활성화
 		local id = #packets
-		if packet.reliable == false and not cachedUnreliableRemoteEvent then
-			cachedUnreliableRemoteEvent = Instance.new("UnreliableRemoteEvent");
-			(cachedUnreliableRemoteEvent :: any).Name = name;
-			(cachedUnreliableRemoteEvent :: any).Parent = unreliableRemoteEventFolder
+		local from = packet.from
+		local reliable = packet.reliable
+		local struct = packet.data -- 싱글, 테이블 가능
+		--packet._init(id, cachedUnreliableRemoteEvent)
+		if not reliable and not cachedUnreliableRemoteEvent then
+			if isServer then
+				cachedUnreliableRemoteEvent = Instance.new("UnreliableRemoteEvent");
+				(cachedUnreliableRemoteEvent :: any).Name = name;
+				(cachedUnreliableRemoteEvent :: any).Parent = unreliableRemoteEventFolder
+			else
+				cachedUnreliableRemoteEvent = script:WaitForChild(name, 10) :: UnreliableRemoteEvent
+			end
 		end
-		packet._init(id, cachedUnreliableRemoteEvent)
+		if isServer and from == "Server" then
+			local writers: any
+			if Strict.typeof(struct) == "RW" then
+				writers = struct[2]
+			else
+				writers = {}
+				for k, v in struct do
+					writers[k] = v[2]
+				end
+			end
+
+			packet.sendTo = function(player: Player, data: T)
+				if type(data) ~= "table" then
+					error(Strict.ExpectException(data, "table"))
+				end
+				loadEmpty()
+				u8W(id)
+				for k, v in data do
+					writers[k](v)
+				end
+				if reliable then -- need benchmark: using upvalue is cheaper or using if is cheaper
+					playerMap[player] = save()
+				else
+					local buff = buffer.create(outgoingBufferUsed)
+					buffer.copy(buff, 0, outgoingBuffer, 0, outgoingBufferUsed)
+					cachedUnreliableRemoteEvent:FireClient(player, buff, outgoingInstances)
+				end
+			end
+
+			packet.broadcast = function(data: T)
+				if type(data) ~= "table" then
+					error(Strict.ExpectException(data, "table"))
+				end
+				loadEmpty()
+				u8W(id)
+				for k, v in data do
+					writers[k](v)
+				end
+				for _, player in Players:GetPlayers() do
+					if reliable then -- need benchmark: using upvalue is cheaper or using if is cheaper
+						playerMap[player] = save()
+					else
+						local buff = buffer.create(outgoingBufferUsed)
+						buffer.copy(buff, 0, outgoingBuffer, 0, outgoingBufferUsed)
+						cachedUnreliableRemoteEvent:FireClient(player, buff, outgoingInstances)
+					end
+				end
+			end
+		elseif not isServer and from == "Client" then
+			local writers = {}
+			for k, v in struct do
+				writers[k] = v[2]
+			end
+
+			packet.sendToServer = function(data: T)
+				if type(data) ~= "table" then
+					error(Strict.ExpectException(data, "table"))
+				end
+				loadEmpty()
+				u8W(id)
+				for k, v in data do
+					writers[k](v)
+				end
+			end
+		else
+			local readers = {}
+			for k, v in struct do
+				readers[k] = v[1]
+			end
+			local bindableEvent = LimeSignal.BindableEvent.new()
+
+			readClosures[id] = function()
+				local value = {}
+				for k, v in readers do
+					value[k] = v()
+				end
+				bindableEvent:Fire(value)
+			end
+			packet.onReceive = bindableEvent.Event :: Hook.HookedEvent<T>
+		end
+
 		packets[id] = packet
 	end
 	local provider = {}
@@ -918,15 +919,9 @@ Net.defineNamespace = (function<T>(name: string, packets: T & { [string]: BasePa
 			local len = buffer.len(buff)
 			while incomingBufferRead < len do
 				local id = buffer.readu8(buff, read(1))
-				if id == 2 then --- 여기서 부터 수정 필요
-					local value
-					value = {}
-					local len = buffer.readu16(incomingBuffer, read(2))
-					value.foo = buffer.readstring(incomingBuffer, read(len), len)
-					value.bar = buffer.readu32(incomingBuffer, read(4))
-					for _, cb in events[2] do
-						task.spawn(cb, player, value)
-					end
+				local readFn = readClosures[id]
+				if readFn then --- 여기서 부터 수정 필요
+					readFn()
 				else
 					error("Unknown event id")
 				end
@@ -957,7 +952,6 @@ Net.defineNamespace = (function<T>(name: string, packets: T & { [string]: BasePa
 	else
 		provider.client = packets
 		local reliableRemoteEvent = script:WaitForChild(name, 10) :: RemoteEvent
-		local unreliableRemoteEvent = script:WaitForChild(name, 10) :: UnreliableRemoteEvent
 		--[=[
 			받는건 서버에서 핸들링하는 방식과 비슷함
 		]=]
@@ -990,7 +984,7 @@ Net.defineNamespace = (function<T>(name: string, packets: T & { [string]: BasePa
 		end)
 
 		if cachedUnreliableRemoteEvent then
-			unreliableRemoteEvent.OnClientEvent:Connect(function(buff, inst)
+			cachedUnreliableRemoteEvent.OnClientEvent:Connect(function(buff, inst)
 				incomingBuffer = buff
 				incomingInstances = inst
 				incomingBufferRead = 0
