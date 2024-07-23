@@ -1,5 +1,4 @@
-/target
 /Packages
-/test
+playground
 sourcemap.json
 **/*.lock
