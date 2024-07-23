@@ -1,5 +1,5 @@
 {
-	"name": "kitty-kit",
+	"name": "kitty-utils",
 	"globIgnorePaths": ["**/*.txt"],
 	"tree":	{
 		"$className": "DataModel",
@@ -9,46 +9,34 @@
 				"$path": "Packages",
 
 				"debugger": {
-					"$path": "kit/debugger"
+					"$path": "utils/debugger"
 				},
 				"flow": {
-					"$path": "kit/flow"
+					"$path": "utils/flow"
 				},
-				"hook": {
-					"$path": "kit/hook"
+				"group": {
+					"$path": "utils/group"
 				},
 				"i18n": {
-					"$path": "kit/i18n"
+					"$path": "utils/i18n"
 				},
 				"input": {
-					"$path": "kit/input"
-				},
-				"kedi": {
-					"$path": "kit/kedi"
+					"$path": "utils/input"
 				},
 				"net": {
-					"$path": "kit/net"
+					"$path": "utils/net"
 				},
 				"queue": {
-					"$path": "kit/queue"
-				},
-				"rbxform": {
-					"$path": "kit/rbxform"
+					"$path": "utils/queue"
 				},
 				"rusty": {
-					"$path": "kit/rusty"
+					"$path": "utils/rusty"
 				},
 				"strict": {
-					"$path": "kit/strict"
-				},
-				"threadpool": {
-					"$path": "kit/threadpool"
+					"$path": "utils/strict"
 				},
 				"userconfig": {
-					"$path": "kit/userconfig"
-				},
-				"when": {
-					"$path": "kit/when"
+					"$path": "utils/userconfig"
 				}
 			}
 		}
