@@ -1,0 +1,14 @@
+[package]
+name = "caveful-games/kitty-flow"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+license = "MIT"
+authors = ["jiwonz"]
+
+[dependencies]
+threadpool = "caveful-games/threadpool@0.1.3"
+limesignal = "caveful-games/limesignal@0.1.4"
+# kit
+strict = "caveful-games/strict@^0.1.0"
+debugger = "caveful-games/debugger@^0.1.0"
