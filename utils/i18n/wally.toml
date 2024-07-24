@@ -1,0 +1,9 @@
+[package]
+name = "caveful-games/kitty-i18n"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+license = "Apache-2.0"
+authors = ["jiwonz"]
+
+[dependencies]
