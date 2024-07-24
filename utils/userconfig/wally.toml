@@ -8,4 +8,4 @@ authors = ["jiwonz", "kimpure"]
 
 [dependencies]
 # kit
-strict = "caveful-games/kitty-strict@^0.1.0"
+strict = "caveful-games/kitty-strict@0.1.0"
