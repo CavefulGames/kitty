@@ -19,8 +19,9 @@ Kitty(키티)는 [Caveful Games](https://www.roblox.com/groups/8485983/Caveful-G
 - 모든 유틸의 wally 페키지 스코프는 `caveful-games`입니다. (ex. caveful-games/kitty-strict)
 
 ## 라이선스
-- 몇가지 존재하는 예외를 제외한 키티 CLI 프로그램과 모든 키티 유틸은 [아파치 라이선스 2.0](https://choosealicense.com/licenses/apache-2.0/)로 보호됩니다.
+- 키티 유틸 마다 적용된 라이선스 제외 키티 CLI 프로그램과 모든 키티 유틸은 [아파치 라이선스 2.0](https://choosealicense.com/licenses/apache-2.0/)로 보호됩니다. (kitty/LICENSE가 적용됩니다)
 - 키티 유틸에서 사용된 저작물은 각 키티 유틸에 기록되어있습니다.
+- 키티의 라이선스에 적힌 저작자는 깃허브 유저네임 기준으로 작성되었습니다.
 
 ## 사용가능한 기능
 아직 많은 기능들이 구현중에 있습니다.
