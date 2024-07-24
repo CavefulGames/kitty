@@ -1,6 +1,5 @@
 {
-	"name": "kitty-utils",
-	"globIgnorePaths": ["**/*.txt"],
+	"name": "kitty-utils-test",
 	"tree":	{
 		"$className": "DataModel",
 		"ReplicatedStorage": {
@@ -38,6 +37,20 @@
 				"userconfig": {
 					"$path": "utils/userconfig"
 				}
+			}
+		},
+		"StarterPlayer": {
+			"$className": "StarterPlayer",
+			"StarterPlayerScripts": {
+				"$className": "StarterPlayerScripts",
+				"Client": {
+					"$path": "tests/place/client.init.luau"
+				}
+			}
+		},
+		"ServerScriptService": {
+			"Server": {
+				"$path": "tests/place/server.init.luau"
 			}
 		}
 	}

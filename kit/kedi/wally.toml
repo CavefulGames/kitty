@@ -1,9 +1,0 @@
-[package]
-name = "caveful-games/kedi"
-version = "0.1.0"
-registry = "https://github.com/UpliftGames/wally-index"
-realm = "shared"
-
-[dependencies]
-strict = "caveful-games/strict@^0.1.0"
-reactlua = "jsdotlua/react@17.1.0"
