@@ -9,7 +9,7 @@ type QueueImpl = {
 	__index: QueueImpl,
 	new: (name: string, runningTime: number, useFunctionName: boolean) -> (Queue),
 	add: (self: Queue, func: (any) -> any, funcName: string, async: boolean) -> (),
-	runList: (self: Queue, pra: { any }) -> (),
+	run: (self: Queue, pra: { any }) -> (),
 	remove: (self: Queue) -> ()
 }
 
@@ -88,7 +88,7 @@ function Queue.add(self, func, funcName, async)
 end
 
 -- 만든 Queue 안에있는 함수들을 실행
-function Queue.runList(self, pra: { any })
+function Queue.run(self, pra: { any })
 	-- v -> (함수 , 함수명 , 에이씽크(비동기 유무)) , 함수실행
 	for i=1 , #self.queue do
 		local value = self.queue[i] :: {}
