@@ -1,0 +1,8 @@
+[[sound]]
+path = "sample.wav" # Name will be 'sample' not 'sample.wav'
+version = "0.1.0"
+properties = { Volume = 2 }
+
+[[sound]]
+path = "sample.wav"
+version = "0.1.0"

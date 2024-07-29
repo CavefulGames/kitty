@@ -1,0 +1,23 @@
+[game]
+name = "sans"
+version = "0.1.0"
+production_id = 123124
+owner = { group = 8485983 }
+
+[packages]
+std = "roblox" # "selene" | "luau" | "roblox"
+registry = { wally = "https://github.com/UpliftGames/wally-index" }
+# paths = { shared = "Packages", server = "ServerPackages" }
+
+# [packages.core]
+
+[packages.shared]
+limesignal = "caveful-games/limesignal@0.1.5"
+react = "jsdotlua/react@17.1.0"
+by_url = { url = "https://file.com/file.luau" }
+by_path = { path = "ez" }
+by_git = { git = "ez.git" }
+
+# [packages.server]
+
+# [packages.dev]
