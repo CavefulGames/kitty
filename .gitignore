@@ -2,3 +2,4 @@
 playground
 sourcemap.json
 **/*.lock
+launcher/target
