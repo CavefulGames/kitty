@@ -1,8 +1,10 @@
 [package]
 name = "do-not-publish/not-for-publish"
-version = ""
+version = "0.0.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
+exclude = ["**"]
+private = true
 
 [dependencies]
 msgpack-luau = "cipharius/msgpack-luau@0.3.0"
