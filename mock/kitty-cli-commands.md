@@ -24,8 +24,6 @@
 
 ## `wally [commands]` - for package manager (almost same as wally cli)
 - `init`: creates wally.toml
-- `add`: add into wally.toml
-- `remove`: remove in wally.toml
 - `manifest-to-json`
 - `login`
 - `logout`
