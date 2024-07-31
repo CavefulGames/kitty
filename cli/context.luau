@@ -4,7 +4,7 @@ local context = {}
 
 local debugMode = table.find(process.args, "debug") ~= nil
 
-function context.panic(message: string?): never
+function context.panic(message: string?): string?
 	if debugMode then
 		error(message)
 	else
@@ -12,7 +12,8 @@ function context.panic(message: string?): never
 		stdio.write(tostring(message))
 		stdio.write(stdio.color("reset"))
 	end
-	return process.exit(1)
+	process.exit(1)
+	return message
 end
 
 context.assert = function(condition, message)

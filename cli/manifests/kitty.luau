@@ -7,20 +7,23 @@ type Package = string | {
 	path: string?
 }
 
-export type Struct = {
-	name: string,
-	production_id: number?,
-	version: string,
-	authors: { string }?,
+export type Kitty = {
+	game: {
+		name: string,
+		production_id: number?,
+		version: string,
+		owner: { group: number?, user: number? },
+	}?,
 	packages: {
-		registry: string,
+		std: "roblox" | "luau",
+		registry: { wally: string? }?,
 		paths: {
 			[string]: string
 		}?,
-		shared: {
+		core: {
 			[string]: Package
 		}?,
-		core: {
+		shared: {
 			[string]: Package
 		}?,
 		server: {
@@ -33,26 +36,32 @@ export type Struct = {
 }
 
 local kitty = Manifest.new("Kitty",
-	{ "name", "string" },
-	{ "production_id", "number?" },
-	{ "version", "string" },
-	{ "authors", "table?" },
-	{ },
+	{ "game",
+		{ "name", "string" },
+		{ "production_id", "number?" },
+		{ "version", "string" },
+		{ "owner", "table" },
+		"?"
+	},
+	{},
 	{ "packages",
-		{ "registry", "string" },
+		{ "std", "string" },
+		{ "registry", "table?" },
 		{ "paths", "table?" },
 		{ "core" },
+		{},
 		{ "shared" },
+		{},
 		{ "server" },
+		{},
 		{ "dev" }
-	},
-	{ }
-) :: Manifest.Manifest<Struct>
+	}
+) :: Manifest.Manifest<Kitty>
 
 kitty:addPackageIndex("core", { "packages", "core" }, "CorePackages")
 kitty:addPackageIndex("shared", { "packages", "shared" }, "Packages")
 kitty:addPackageIndex("server", { "packages", "server" }, "ServerPackages")
 kitty:addPackageIndex("dev", { "packages", "dev" }, "DevPackages")
-kitty.packageIndexPathModifierRoute = { "packages", "paths" }
+kitty.packageIndexPathModifiersRoute = { "packages", "paths" }
 
 return kitty

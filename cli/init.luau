@@ -4,101 +4,109 @@ local pathfs = require("pathfs")
 local stdio = require("@lune/stdio")
 local argparse = require("../submodules/argparse")
 local context = require("context")
-local WallyIndex = require("WallyIndex")
 local kittyManifest = require("manifests/kitty")
--- local MANIFEST_PATH = luaupath.Path.from("kitty.toml")
--- local WALLY_MANIFEST_PATH = luaupath.Path.from("wally.toml")
--- local DEFAULT_PACKAGES_PATHS = { -- inspired by wally but 'core' added
--- 	core = "CorePackages",
--- 	shared = "Packages",
--- 	server = "ServerPackages",
--- 	dev = "DevPackages"
--- }
+local wallyManifest = require("manifests/wally")
+local types = require("types")
+local parsePackage = require("parsePackage")
 
--- local function readManifest(path: pathfs.AsPath): Manifest
--- 	local exist = pathfs.isFile(path)
--- 	if exist then
--- 		return serde.decode("toml", pathfs.readFile(path))
--- 	end
--- 	return context.panic(`Not a Kitty project, Check if '{path}' exists.`)
--- end
+local registries: { [string]: types.RegistryImpl<any> } = {
+	wally = require("registries/wally")
+}
 
--- local function writeManifest(path: pathfs.AsPath, manifest: Manifest)
--- 	local toml = MANIFEST_TOML_STRUCT:encode(manifest)
--- 	pathfs.writeFile(path, toml)
--- end
-
--- local function getManifestPackages(manifest: Manifest, packageType: PackageTypes?): { [string]: string }
--- 	local packages = manifest.packages :: any
--- 	if not packages then
--- 		packages = {}
--- 		manifest.packages = packages
--- 	end
--- 	if not packageType then
--- 		local answer = stdio.prompt("select", "Choose a package type: (Shared)", {
--- 			"Shared",
--- 			"Server",
--- 			"Core",
--- 			"Development"
--- 		})
--- 		if not answer then
--- 			answer = 1
--- 		end
--- 		packageType = if answer == 1 then "shared" elseif answer == 2 then "server" else "core"
--- 	end
--- 	local dependencies = packages[packageType]
--- 	if not dependencies then
--- 		dependencies = {}
--- 		packages[packageType] = dependencies
--- 	end
--- 	return dependencies
--- end
+local function getRegistries(registry: { [string]: string? })
+	local result = {}
+	for name, url in registry do
+		local reg = registries[name]
+		if reg and url then
+			table.insert(result, reg.new(url))
+		end
+	end
+	return result
+end
 
 local cli = argparse("kitty")
 local init = cli:command("init", "Initializes a kitty project")
 init:option("--path", "Project path")
-init:action(function(arg: { path: string? })
-	kittyManifest:setProjectPath(arg.path)
+init:action(function(args: { path: string? })
+	kittyManifest:setProjectPath(args.path)
 	if pathfs.isFile(kittyManifest:getPath()) then
 		context.panic(`There is already a Kitty project in this directory. Manifest file ({kittyManifest:getPath()}) already exists.`)
 	end
-	local name = stdio.prompt("text", "Project name: (untitled)\n")
-	if name == "" then
-		name = "untitled"
-	end
-	local version = stdio.prompt("text", "Inital version: (0.1.0)\n") or "0.1.0"
-	if version == "" then
-		version = "0.1.0"
-	end
-	kittyManifest:write({
-		name = name,
-		version = version,
-		packages = {
-			registry = "https://github.com/UpliftGames/wally-index"
-		}
+	local selected = stdio.prompt("select", "Choose a standard of package management:", {
+		"roblox",
+		"luau"
 	})
+	if selected == 1 then
+		kittyManifest:write({
+			packages = {
+				std = "roblox",
+				registry = { wally = "https://github.com/UpliftGames/wally-index" }
+			}
+		})
+	elseif selected == 2 then
+		kittyManifest:write({
+			packages = {
+				std = "luau"
+			}
+		})
+	end
 end)
-local add = cli:command("add", "Add a package")
+local add = cli:command("add", "Add a package but does not install them")
 add:argument("name", "Package name to add")
 add:option("--path", "Project path")
-add:option("--index", "Package index")
-add:action(function(arg: { name: string, path: string?, index: string? })
-	kittyManifest:setProjectPath(arg.path)
+add:flag("-C --core", "Core packages")
+add:flag("-D --dev", "Developer packages")
+add:action(function(args: { name: string, path: string?, core: boolean?, dev: boolean? })
+	kittyManifest:setProjectPath(args.path)
 	local manifest = kittyManifest:read()
-	local index = WallyIndex.new(manifest.packages.registry)
-	local name, package = index:findPackage(arg.name)
-	local packages = kittyManifest:getPackages(arg.index)
-	packages[name] = package
-	kittyManifest:write(manifest)
+	if not manifest.packages then
+		error(context.panic(`Could not resolve 'packages' in {kittyManifest:getPath()}`))
+	end
+	if not manifest.packages.registry then
+		error(context.panic(`Could not resolve 'registry' in {kittyManifest:getPath()}`))
+	end
+	for _, index in getRegistries(manifest.packages.registry) do
+		local findResult = index:findPackage(args.name)
+		local package = parsePackage(findResult.package)
+		if not package then
+			continue
+		end
+		if not package.name or not package.scope or not package.version then
+			continue
+		end -- 먼가 캐시된 인덱스를 써야할거같은 느낌 할때마다 api 요청하는게 아닌!
+		local metadatas = index:getPackageMetadata(package.scope.text, package.name.text)
+		local metadata = metadatas[]
+		local indexName =  do
+			if args.core then
+				indexName = "core"
+			end
+			if args.dev then
+				indexName = "dev"
+			end
+		end
+		local packages = kittyManifest:getPackages(indexName)
+		packages[findResult.name] = findResult.package
+		kittyManifest:write(manifest)
+	end
 end)
 
-local install = cli:command("install", "Fetch added packages and install them")
+local install = cli:command("install", "Fetch added packages and install them or install the target package if given")
+install:argument("target", "Package name to install"):args("?")
+install:option("--path", "Project path")
+install:flag("-C --core", "Core packages")
+install:flag("-D --dev", "Developer packages")
 install:action(function()
 
 end)
 
 local wally = cli:command("wally", "Wally commands that depends on wally")
-local wallyLogin = wally:command("login", "Login into a registry")
+local wallyInit = wally:command("init", "Initialize a new Wally project")
+wallyInit:argument("path", "The path to the project to initialize. Defaults to the current directory"):args("?")
+wallyInit:action(function(args: { path: string })
+	wallyManifest:setProjectPath(args.path)
+
+end)
+local wallyLogin = wally:command("login", "Log into a registry")
 wallyLogin:action(function()
 	print("hi")
 end)
