@@ -1,17 +1,19 @@
-[game]
-name = "sans"
+# kitty.toml main purpose: extending/organize wally.toml & adding production
+
+[production]
+id = 123124
 version = "0.1.0"
-production_id = 123124
-owner = { group = 8485983 }
+owner = { group = 123456 }
 
 [packages]
-std = "roblox" # "selene" | "luau" | "roblox"
+std = "roblox" # "luau" | "roblox"
 registry = { wally = "https://github.com/UpliftGames/wally-index" }
-# paths = { shared = "Packages", server = "ServerPackages" }
 
 # [packages.core]
 
 [packages.shared]
+# if needed default to Packages: "$path" = "Packages" # ex. "Packages/Shared"
+# if needed default to none, required when other realm depends on 'shared': "$place" = "game.ReplicatedService.Packages"
 limesignal = "caveful-games/limesignal@0.1.5"
 react = "jsdotlua/react@17.1.0"
 by_url = { url = "https://file.com/file.luau" }
