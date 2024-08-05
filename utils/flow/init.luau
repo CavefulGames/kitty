@@ -6,6 +6,37 @@ local ThreadPool = require(script.Parent.threadpool)
 local LimeSignal = require(script.Parent.limesignal)
 local Flow = {}
 
+export type Sleep = typeof(setmetatable(
+	{} :: {
+		duration: number,
+		isWakenUp: boolean
+	},
+	{} :: SleepImpl
+))
+
+type SleepImpl = {
+	__index: SleepImpl,
+	new: (seconds: number) -> (Sleep),
+	start: (self: Sleep) -> (),
+	wakeUp: (self: Sleep) -> ()
+}
+
+export type Timer = typeof(setmetatable(
+	{} :: {
+		startTime: number
+	},
+	{} :: TimerImpl
+))
+
+type TimerImpl = {
+	__index: TimerImpl,
+	new: () -> (Timer),
+	now: (self: Timer) -> (),
+	hasPassed: (self: Timer, seconds: number) -> (boolean),
+	wait: (self: Timer, seconds: number) -> (boolean),
+	reset: (self: Timer) -> ()
+}
+
 local sleeping: { [any]: boolean } = {}
 
 Flow.getGameTime = time
@@ -26,8 +57,10 @@ function Flow.sleep(sleepId: any, duration: number): (boolean, number) -- (didSl
 	if success then
 		sleeping[sleepId] = nil
 	end
-	return success,os.clock() - t
+	return success, os.clock() - t
 end
+
+local Sleep = {}
 
 function Flow.switch(value: any)
 	return function(cases:{ [any]: any, default: () -> ()? })

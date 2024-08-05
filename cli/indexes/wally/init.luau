@@ -11,7 +11,7 @@ local getCacheDirectory = require("../../getCacheDirectory")
 local parsePackage = require("../../parsePackage")
 local getUrlDomain = require("../../getUrlDomain")
 
-local WallyRegistry = {} :: types.IndexImpl
+local WallyRegistry = {} :: types.RegistryImpl<typeof(wallyapi())>
 WallyRegistry.__index = WallyRegistry
 
 function WallyRegistry.new(registryUrl)
@@ -26,11 +26,7 @@ function WallyRegistry.new(registryUrl)
 	if not config.api or not config.github_oauth_id then
 		context.panic("Corrupted config file")
 	end
-	self.config = {
-		api = config.api,
-		githubOauthId = config.github_oauth_id
-	}
-	return self
+	return
 end
 
 function WallyRegistry.fetchIndex(self)

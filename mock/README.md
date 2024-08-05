@@ -31,18 +31,26 @@
 - `install`: installs packages through wally.toml
 
 ## `asset [commands]` - for asset managements (inspired by git)
+- (REPL) file: edit properties of asset (with autocomplete!)
 - `reload`: reload all temp assets
 - `unload`: unload all temp assets
-- `publish`: publish assets to roblox
+- `upload`: upload assets to roblox
 - `import`: prompt import assets
 - `add`: register assets
 - `rm`: remove asset
 - `mv`: move asset
-- `set`: set property of asset
-- `get`: get property of asset
-- `edit`: edit properties of asset (with autocomplete!)
+- `status` file: inspect asset publish status
+<!-- - `set`: set property of asset
+- `get`: get property of asset -->
 
 ## `bin [commands]` - for rbx binaries
 - `init`: initialize bin.kitty.rbxl
 - `edit`: edit bin with roblox studio
 - `sync`: sync bin into file system (with `.model.json`)
+
+# kitty supports rojo's
+- .model.json
+- .json, .toml as ModuleScript
+- .txt as StringValue
+- .csv as LocalizationTable
+- .rbxm, .rbxmx as bin
