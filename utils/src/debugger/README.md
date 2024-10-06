@@ -16,9 +16,9 @@ Debugger.warn("Oops, something went wrong!")
 
 local module = {}
 
-return Debugger.Module(module) -- 모듈의 버그 체크
+return Debugger.Module("ModuleNameForDebugging", module) -- 모듈의 버그 체크
 
 ```
 
 ## TODO
-- 구현
+- [x] 구현
