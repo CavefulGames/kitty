@@ -1,0 +1,15 @@
+[package]
+name = "caveful-games/kitty-net"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+license = "Apache-2.0"
+authors = ["jiwonz"]
+
+[dependencies]
+msgpack-luau = "cipharius/msgpack-luau@0.3.0"
+crc16 = "jiwonz/crc16@0.1.0"
+option = "lukadev-0/option@1.0.0"
+# kit
+debugger = "caveful-games/kitty-debugger@0.1.0"
+strict = "caveful-games/kitty-strict@0.1.0"
