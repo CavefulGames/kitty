@@ -1,22 +1,12 @@
 --!strict
 -- inspired by nodejs console and C# Debug
 
---$Packages
 local Debugger = {}
 
---$Services
 local RunService = game:GetService("RunService")
 
---$Private
 local isStudio = RunService:IsStudio()
-local dummySilentFunction = function() end
-local tagFormat = "[ %s ]"
 local MutableTypeKey = function() end
-
-local function getTag(): string
-	local scriptName = debug.traceback(nil, 3):gsub("\n", ""):match("[^.]+%.(.-):%d+$")
-	return tagFormat:format(scriptName)
-end
 
 local function typecheckMutable(propertyName: string, mutable: any, value: any)
 	local typeName = typeof(value)
@@ -27,77 +17,10 @@ local function typecheckMutable(propertyName: string, mutable: any, value: any)
 	end
 end
 
---$Public
-
 --[=[
-	디버그 모드 활성화 여부를 설정하거나 가져올 수 있는 setter/getter입니다.
-
-	`_G.__DEV__` 설정 여부에 영향을 받습니다. (`_G.__DEV__`가 참이면 참을 반환합니다.)
-
-	`RunService:IsStudio()`가 참이면 `_G.__DEV__`의 기본값은 참입니다.
-
-	```lua
-	print("Debug mode enabled:", Debugger.enabled()) -- false
-	Debugger.enabled(true)
-	print("Debug mode enabled:", Debugger.enabled()) -- true
-	```
-]=]
-function Debugger.isDevMode(): boolean
-	-- selene: allow(global_usage)
-	return (Debugger :: any).enabled or _G.__DEV__
-end
-
-function Debugger.log(...: any)
-	if not Debugger.isDevMode() then
-		return
-	end
-	print(getTag(), ...)
-end
-
-function Debugger.logf(message: string, ...: string)
-	Debugger.log(message:format(...))
-end
-
-function Debugger.warn(...: any)
-	if not Debugger.isDevMode() then
-		return
-	end
-	warn(getTag(), ...)
-end
-
-function Debugger.warnf(message: string, ...: string)
-	Debugger.warn(message:format(...))
-end
-
-function Debugger.assert(assertion: boolean, ...: any)
-	if assertion then
-		Debugger.warn(...)
-	end
-end
-
-function Debugger.assertf(assertion: boolean, message: string, ...: string)
-	Debugger.assert(assertion, message:format(...))
-end
-
---- Deprecated and disabled due to dangerous
--- function Debugger.fatal(message: string)
--- 	local traceback = debug.traceback(nil, 2):gsub("\n", ""):split(":")[1]:split(".")
--- 	local info = traceback[#traceback - 1] .. traceback[#traceback]
--- 	if isServer then
--- 		for _, player in Players:GetPlayers() do
--- 			player:Kick(Debugger.fatalErrorMessage:format(info, message))
--- 		end
--- 	else
--- 		Players.LocalPlayer:Kick(Debugger.fatalErrorMessage:format(info, message))
--- 	end
--- end
-
---[=[
-	`Strict.Capsule`에서 파생된 함수이며 주어진 테이블을 디버깅에 유용한 모듈로 만듭니다.
-
 	모듈의 속성은 `Debugger.Mutable` 제외 읽기 전용이며 키값은 문자열만 허용됩니다.
 
-	성능에 지장을 줄 수 있으므로 디버그 모드가 활성화된 상태에서만 메타테이블을 사용하여 런타임 타입 체킹을 수행합니다.
+	성능에 지장을 줄 수 있으므로 `_G.__DEV__ = true`인 상태에서만 메타테이블을 사용하여 런타임 타입 체킹을 수행합니다.
 
 	```lua
 	local module = Debugger.Module("MyModule", {
@@ -127,7 +50,8 @@ function Debugger.Module<T>(name: string, module: T): T
 			module[k] = nil
 		end
 	end
-	if Debugger.isDevMode() then
+	-- selene: allow(global_usage)
+	if _G.__DEV__ then
 		setmetatable(module :: any, {
 			__index = function(_, key)
 				local mutable = mutableProperties[key]
@@ -154,7 +78,7 @@ end
 
 	타입은 정적이며 빈 속성은 `Debugger.Mutable(nil, "typeName?")`으로 정의 가능합니다.
 
-	`Debugger.Module`의 속성이며, 디버그 모드가 활성화된 상태에서만 동작합니다.
+	`Debugger.Module`의 속성이며, `_G.__DEV__ = true`인 상태에서만 동작합니다.
 
 	```lua
 	local module = Debugger.Module({
@@ -170,7 +94,8 @@ end
 	```
 ]=]
 function Debugger.Mutable<T>(initialValue: T, typeName: string?): T
-	return if Debugger.isDevMode() then {
+	-- selene: allow(global_usage)
+	return if _G.__DEV__ then {
 		[MutableTypeKey] = {
 			value = initialValue,
 			typeName = if typeName then if typeName:sub(-1) == "?" then typeName:sub(1, -2) else typeName else typeof(typeName),
@@ -178,12 +103,6 @@ function Debugger.Mutable<T>(initialValue: T, typeName: string?): T
 		}
 	} else initialValue :: any
 end
-
-Debugger.silent = (setmetatable({}, {
-	__index = function(key)
-		return if isStudio then Debugger[key] else dummySilentFunction
-	end
-}) :: any) :: typeof(Debugger)
 
 Debugger.enabled = Debugger.Mutable(false)
 

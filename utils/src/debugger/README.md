@@ -22,3 +22,6 @@ return Debugger.Module("ModuleNameForDebugging", module) -- 모듈의 버그 체
 
 ## TODO
 - [x] 구현
+- [ ] Logger로 이동
+- [ ] 디스코드 동기화 구현
+- [ ] 테스트
