@@ -1,0 +1,71 @@
+{
+	"name": "kitty-utils-dev",
+	"tree":	{
+		"$className": "DataModel",
+		"ReplicatedStorage": {
+			"$className": "ReplicatedStorage",
+			"bank": {
+				"$path": "src/bank",
+				"roblox-packages": {
+					"$path": "roblox-packages"
+				}
+			},
+			"flow": {
+				"$path": "src/flow",
+				"roblox-packages": {
+					"$path": "roblox-packages"
+				}
+			},
+			"group": {
+				"$path": "src/group",
+				"roblox-packages": {
+					"$path": "roblox-packages"
+				}
+			},
+			"paidcontents": {
+				"$path": "src/paidcontents",
+				"roblox-packages": {
+					"$path": "roblox-packages"
+				}
+			},
+			"queue": {
+				"$path": "src/queue",
+				"roblox-packages": {
+					"$path": "roblox-packages"
+				}
+			},
+			"rusty": {
+				"$path": "src/rusty",
+				"roblox-packages": {
+					"$path": "roblox-packages"
+				}
+			},
+			"strict": {
+				"$path": "src/strict",
+				"roblox-packages": {
+					"$path": "roblox-packages"
+				}
+			},
+			"userconfig": {
+				"$path": "src/userconfig",
+				"roblox-packages": {
+					"$path": "roblox-packages"
+				}
+			}
+		},
+		"StarterPlayer": {
+			"$className": "StarterPlayer",
+			"StarterPlayerScripts": {
+				"$className": "StarterPlayerScripts",
+				"Client": {
+					"$path": "tests/client.init.luau"
+				}
+			}
+		},
+		"ServerScriptService": {
+			"Server": {
+				"$path": "tests/server.init.luau"
+			}
+		}
+	}
+}
