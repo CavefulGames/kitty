@@ -1,0 +1,17 @@
+name = "caveful_games/kitty"
+version = "0.1.0"
+license = "MIT"
+
+[target]
+environment = "roblox"
+
+[scripts]
+roblox_sync_config_generator = ".pesde/roblox_sync_config_generator.luau"
+sourcemap_generator = ".pesde/sourcemap_generator.luau"
+
+[indices]
+default = "https://github.com/daimond113/pesde-index"
+
+
+[dependencies]
+handynet = { name = "caveful_games/handynet", version = "^0.2.3" }

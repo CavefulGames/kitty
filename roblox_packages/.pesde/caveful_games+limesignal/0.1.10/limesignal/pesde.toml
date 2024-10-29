@@ -1,0 +1,21 @@
+name = "caveful_games/limesignal"
+version = "0.1.10"
+description = "A fork of LemonSignal with additional features added"
+license = "MIT"
+authors = ["Aspecky", "Sona", "jiwonz"]
+repository = "https://github.com/CavefulGames/LimeSignal"
+private = false
+includes = ["LICENSE.md", "README.md", "pesde.toml", "src"]
+
+[target]
+environment = "roblox"
+lib = "src/lib.luau"
+build_files = ["src"]
+
+[indices]
+default = "https://github.com/daimond113/pesde-index"
+
+[dependencies.threadpool]
+name = "caveful_games/threadpool"
+version = "^0.1.9"
+index = "https://github.com/daimond113/pesde-index"

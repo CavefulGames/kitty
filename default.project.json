@@ -7,6 +7,10 @@
 			"packages": {
 				"$path": "Packages",
 
+				"pesdeModule": {
+					"$path": "roblox_packages"
+				},
+
 				"debugger": {
 					"$path": "utils/debugger"
 				},
@@ -35,7 +39,7 @@
 					"$path": "utils/strict"
 				},
 				"userconfig": {
-					"$path": "utils/userconfig"
+					"$path": "utils/gear"
 				}
 			}
 		},

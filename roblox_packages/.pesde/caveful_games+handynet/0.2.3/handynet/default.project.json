@@ -1,0 +1,16 @@
+{
+  "tree": {
+    "$className": "Folder",
+    "lib": {
+      "$path": "lib.luau"
+    },
+    "roblox_packages": {
+      "$path": {
+        "optional": "roblox_packages"
+      }
+    },
+    "src": {
+      "$path": "src"
+    }
+  }
+}

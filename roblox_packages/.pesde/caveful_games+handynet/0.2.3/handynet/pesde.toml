@@ -1,0 +1,21 @@
+name = "caveful_games/handynet"
+version = "0.2.3"
+description = "ByteNet fork made more handy"
+license = "MIT"
+authors = ["ffrostfall", "jiwonz"]
+repository = "https://github.com/CavefulGames/HandyNet"
+private = false
+includes = ["LICENSE.md", "README.md", "lib.luau", "pesde.toml", "src"]
+
+[target]
+environment = "roblox"
+lib = "lib.luau"
+build_files = ["lib.luau", "src"]
+
+[indices]
+default = "https://github.com/daimond113/pesde-index"
+
+[dependencies.limesignal]
+name = "caveful_games/limesignal"
+version = "^0.1.10"
+index = "https://github.com/daimond113/pesde-index"

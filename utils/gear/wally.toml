@@ -1,5 +1,5 @@
 [package]
-name = "caveful-games/kitty-userconfig"
+name = "caveful-games/kitty-gear"
 version = "0.1.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
@@ -7,5 +7,4 @@ license = "Apache-2.0"
 authors = ["jiwonz", "kimpure"]
 
 [dependencies]
-# kit
-strict = "caveful-games/kitty-strict@0.1.0"
+datastore-light = "kimpure/datastore-light@0.3.0"
