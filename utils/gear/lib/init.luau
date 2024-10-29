@@ -32,28 +32,10 @@ local savePacket = HandyNet.defineNamespace('userconfig-save',function()
     return { 
         onSave = HandyNet.definePacket(
             "client->server",
-            HandyNet.struct { name = HandyNet.unknown, config = HandyNet.nothing }
+            HandyNet.struct { name = HandyNet.unknown, config = HandyNet.unknown }
         )
     }
 end)
-
--- local getOnServer = HandyNet.defineNamespace('userconfig-getOnServer',function() 
---   return { 
---       get = HandyNet.definePacket(
---           "client->server",
---           HandyNet.struct {}
---       )
---   }
--- end)
-
--- local getOnClient = HandyNet.defineNamespace('userconfig-getOnClient',function() 
---   return { 
---       get = HandyNet.definePacket(
---           "server->client",
---           HandyNet.struct {}
---       )
---   }
--- end)
 
 local config = {} :: ConfigImpl<any>
 config.__index = config
@@ -64,19 +46,11 @@ end
 
 function config.save(self)
     if RunService:IsClient() then
-        -- if not onServer then
-        --     getOnServer.get.send({})
-        -- end
-        if not onServer then
-            error('Please require it from the server.')
-        end
-        
         savePacket.onSave.send { 
             name = self.name, 
             config = self() 
         }
     else
-        print(self.name);
         local ds = self.datastore :: typeof(DataStoreLight.new(0 :: any))
         ds:set(self.name, self());
         ds:save()
@@ -107,12 +81,6 @@ function gear.defineConfiguration(name, fields)
                   config=data,
                 }, config)
             else
-                -- getOnClient.get.event:connect(function(data)
-                --     onServer = true
-                -- end)
-                -- if not onServer then
-                --     getOnServer.get.send({})
-                -- end
                 return setmetatable({
                   player=player :: Player,
                   name=name,
@@ -131,13 +99,8 @@ function gear.startServer()
             return
         end 
 
-        -- getOnServer.get.event:connect(function(_, player)
-        --     getOnClient.get.send({}, player)
-        -- end)
-
         savePacket.onSave.event:connect(function(data, player)
               local saveDataStore =  DataStoreLight.new(player.UserId)
-              print(data.name)
               saveDataStore:set(data.name :: string, data.config)
               saveDataStore:save()
         end)
