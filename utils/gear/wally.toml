@@ -7,4 +7,3 @@ license = "Apache-2.0"
 authors = ["jiwonz", "kimpure"]
 
 [dependencies]
-datastore-light = "kimpure/datastore-light@0.3.0"

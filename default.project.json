@@ -38,7 +38,7 @@
 				"strict": {
 					"$path": "utils/strict"
 				},
-				"userconfig": {
+				"gear": {
 					"$path": "utils/gear"
 				}
 			}

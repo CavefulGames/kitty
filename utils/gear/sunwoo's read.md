@@ -8,7 +8,7 @@ return gear.defineConfiguration("db_key", {
   })
   
   -- server.luau
-  gear.startServer() -- 수동 구현 필요없어짐, 라이브러리가 대신 해줌
+  gear.startServer() -- 수동 구현 필요없어짐, 라이브러리가 대신 해줌 = 넷 난발 안해도 됌 z
   
   local config = require(path.to.config)
   Player.PlayerAdded:Connect(function(player)
