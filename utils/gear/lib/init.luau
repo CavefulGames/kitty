@@ -1,4 +1,5 @@
 --!strict
+--TODO: DataType 만들기, linux vinegar 오류 해결하기
 local RunService = game:GetService('RunService')
 
 local Result = require(script.Parent.Parent.result)
