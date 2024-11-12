@@ -1,5 +1,5 @@
 --!strict
---TODO: DataType 만들기, linux vinegar 오류 해결하기
+--TODO: DataType 만들기
 local RunService = game:GetService('RunService')
 
 local Result = require(script.Parent.Parent.result)
@@ -16,14 +16,30 @@ type ConfigImpl<T> = {
     save: (self: Config<T>) -> (Result<Config<T>, string>),
 }
 
+type gearDefineField<T> = T & { __brand: 'gearField' }
+
+type dataTypes = 
+    | "boolean"
+    | "string"
+    | "char"
+    | "array"
+    | "u8"
+    | "u16"
+    | "u32"
+    | "i8"
+    | "i16"
+    | "i32"
+    | "f32"
+    | "f64" 
+
 type Gear = {
-    defineField: <T>(dataType: T, default: T) -> T,
-    defineConfiguration: <T>(name: string, fields: T & { [string]: any }) -> { load: (player: Player?) -> (Config<T>) },
+    defineField: <T>(data: T, dataType: dataTypes?) -> gearDefineField<T>,
+    defineConfiguration: <T>(name: string, fields: T & { [string]: gearDefineField<T> }) -> { load: (player: Player?) -> (Config<T>) },
     startServer: () -> (),
 }
 
 type Config<T> = typeof(setmetatable({} :: {
-    config: T,
+    config: T & { [string]: gearDefineField<T> },
     player: Player,
     name: string,
     datastore: typeof(DataStoreLight.new(0 :: any))?,
@@ -61,6 +77,34 @@ function config.save(self)
 end
 
 local gear = {} :: Gear
+
+function gear.defineField(data, dataType)
+    dataType = (dataType or if data then
+            if typeof(data :: any) == 'string' then
+                if string.len(dataType :: any) == 1 then
+                    'char'
+                else
+                    'string'
+            elseif typeof(data :: any) == 'boolean' then
+                'boolean'
+            elseif typeof(data :: any) == 'table' then
+                'array'
+            elseif typeof(data :: any) == 'number' then
+                if math.round(data :: any) == data :: any then
+                    if math.abs(data :: any) == data :: any then
+                        'u32'
+                    else
+                        'i32'
+                else
+                    'f64'
+            else
+                'unknown'
+        else
+            error "argument' s is nil") 
+    :: dataTypes
+    
+    
+end
 
 function gear.defineConfiguration(name, fields)
     return { 
