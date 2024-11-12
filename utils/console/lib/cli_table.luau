@@ -62,12 +62,23 @@ local function mathMax(...: number)
     return result
 end
 
-local function renderRow(row: { [any]: any }, columnWidths: number): string
+local function arrayPrototypeJoin(array: { [number]: string }, str: string?)
+    local result = ''
+    str = str::string or ',' :: string
+
+    for i=1, #array do
+        result ..= `{array[i]}{str}`
+    end
+
+    return result
+end
+
+local function renderRow(row: { [number]: string }, columnWidths: { [number]: number }): string
     local out = tableChars.left
     for i=1, #row do
         local cell: string = row[i]
         local len: number = #cell
-        local needed: number = (columnWidths - len)
+        local needed: number = (columnWidths[i] - len)
 
         out ..= cell .. stringPrototypeRepeat(' ', math.round(needed))
         if i ~= #row - 1 then
@@ -79,7 +90,7 @@ local function renderRow(row: { [any]: any }, columnWidths: number): string
 end
 
 local function tableFunction(head: { [number]: string }, columns: { [number]: string })
-    local rows = {}
+    local rows = {} :: { [number]: { [number]: string } }
     local columnWidths = arrayPrototypeMap(head, function(v, i)
         return #v
     end)
@@ -108,6 +119,22 @@ local function tableFunction(head: { [number]: string }, columns: { [number]: st
     end)
 
     local result = tableChars.topLeft
-    
+     .. arrayPrototypeJoin(divider, tableChars.topMiddle)
+     .. `{tableChars.topRight}\n`
+     .. renderRow(head, columnWidths)
+     .. `\n{tableChars.leftMiddle}`
+     .. arrayPrototypeJoin(divider, tableChars.rowMiddle)
+     .. `\n{tableChars.rightMiddle}\n`
 
+    for _, row in rows do
+        result ..= `{renderRow(row, columnWidths)}\n`
+    end
+
+    result ..= tableChars.bottomLeft 
+    .. arrayPrototypeJoin(divider, tableChars.bottomMiddle) 
+    .. tableChars.bottomRight
+
+    return result
 end
+
+return tableFunction
