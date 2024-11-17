@@ -10,7 +10,8 @@ type ConsoleImpl = {
 }
 
 local primordials = require(script.Parent:WaitForChild('primordials'))
-
+local errorCodes = require(script.Parent:WaitForChild('mainError')).codes
+local ERR_CONSOLE_WRITABLE_STREAM = errorCodes.ERR_CONSOLE_WRITABLE_STREAM
 
 local console = {} :: ConsoleImpl
 console.__index = console
@@ -32,8 +33,12 @@ function console.new(options, stderr, ignoreErrors)
     local groupIndentation = options.groupIndentation
 
     if not stdout or typeof(stdout.write) ~= 'function' then
-
+        error(ERR_CONSOLE_WRITABLE_STREAM('stdout'))
     end
+    if not stderr or typeof(stderr.write) ~= 'function' then
+        error(ERR_CONSOLE_WRITABLE_STREAM('stderr'))
+    end
+
 end
 
 function console.__call(...)

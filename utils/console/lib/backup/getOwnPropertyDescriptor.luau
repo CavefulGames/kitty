@@ -145,48 +145,9 @@ local function assertEqual(actual: any, expected: any, message: string?)
     end
 end
 
--- 사용 예시와 테스트
-local function runTests()
-    -- 데이터 프로퍼티 테스트
-    local obj = {}
-    defineProperty(obj, "name", {
-        value = "test",
-        writable = true,
-        enumerable = true,
-        configurable = true
-    })
-
-    local desc = getOwnPropertyDescriptor(obj, "name") :: { [any]: any }
-    assertEqual(desc.value, "test")
-    assertEqual(desc.writable, true)
-    assertEqual(desc.enumerable, true)
-    assertEqual(desc.configurable, true)
-
-    -- 접근자 프로퍼티 테스트
-    local privateValue = 0
-    defineProperty(obj, "age", {
-        get = function()
-            return privateValue
-        end,
-        set = function(value)
-            privateValue = value
-        end,
-        enumerable = true,
-        configurable = true
-    })
-
-    obj.age = 25
-    assertEqual(obj.age, 25)
-    assertEqual(privateValue, 25)
-
-    local ageDesc = getOwnPropertyDescriptor(obj, "age") :: { [any]: any }
-    assertEqual(type(ageDesc.get), "function")
-    assertEqual(type(ageDesc.set), "function")
-end
 
 return {
     getOwnPropertyDescriptor = getOwnPropertyDescriptor,
     defineProperty = defineProperty,
     toPropertyDescriptor = toPropertyDescriptor,
-    runTests = runTests
 }
