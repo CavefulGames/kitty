@@ -40,6 +40,9 @@
 				},
 				"gear": {
 					"$path": "utils/gear"
+				},
+				"console": {
+					"$path": "utils/console"
 				}
 			}
 		},
