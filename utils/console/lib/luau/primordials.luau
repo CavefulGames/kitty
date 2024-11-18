@@ -21,9 +21,21 @@ local function objectKeys(obj)
     return result
 end
 
+local function objectAssign(...)
+    local args = { ... }
+    local arr = args[1]
+    for i=2, #args - 1, 1 do
+        for k, v in args[i] do
+            arr[k] = v
+        end
+    end
+    return arr
+end
+
 return {
     arrayPrototypeUnshift=arrayPrototypeUnshift,
     reflectConstruct=reflectConstruct,
     reflectApply=reflectApply,
     objectKeys=objectKeys,
+    objectAssign=objectAssign,
 }

@@ -156,7 +156,7 @@ local function makeErrorWithCode(base, key)
                 ..`match the required ones (${expectedLength}).`
             );
 
-            arrayPrototypeUnshift(args, msg)
+            args = arrayPrototypeUnshift(args, msg)
             local self = setmetatable(base.new(reflectApply(lazyInternalUtilInspect().format, nil, table.unpack(args))), nodeError)
             self.code = key
             

@@ -1,70 +1,111 @@
-function inspect(value, opts) {
-    // Default options
-    const ctx = {
-      budget: {},
-      indentationLvl: 0,
-      seen: [],
-      currentDepth: 0,
-      stylize: stylizeNoColor,
-      showHidden: inspectDefaultOptions.showHidden,
-      depth: inspectDefaultOptions.depth,
-      colors: inspectDefaultOptions.colors,
-      customInspect: inspectDefaultOptions.customInspect,
-      showProxy: inspectDefaultOptions.showProxy,
-      maxArrayLength: inspectDefaultOptions.maxArrayLength,
-      maxStringLength: inspectDefaultOptions.maxStringLength,
-      breakLength: inspectDefaultOptions.breakLength,
-      compact: inspectDefaultOptions.compact,
-      sorted: inspectDefaultOptions.sorted,
-      getters: inspectDefaultOptions.getters,
-      numericSeparator: inspectDefaultOptions.numericSeparator,
-    };
-    if (arguments.length > 1) {
-      // Legacy...
-      if (arguments.length > 2) {
-        if (arguments[2] !== undefined) {
-          ctx.depth = arguments[2];
-        }
-        if (arguments.length > 3 && arguments[3] !== undefined) {
-          ctx.colors = arguments[3];
-        }
-      }
-      // Set user-specified options
-      if (typeof opts === 'boolean') {
-        ctx.showHidden = opts;
-      } else if (opts) {
-        const optKeys = ObjectKeys(opts);
-        for (let i = 0; i < optKeys.length; ++i) {
-          const key = optKeys[i];
-          // TODO(BridgeAR): Find a solution what to do about stylize. Either make
-          // this function public or add a new API with a similar or better
-          // functionality.
-          if (
-            ObjectPrototypeHasOwnProperty(inspectDefaultOptions, key) ||
-            key === 'stylize') {
-            ctx[key] = opts[key];
-          } else if (ctx.userOptions === undefined) {
-            // This is required to pass through the actual user input.
-            ctx.userOptions = opts;
-          }
-        }
-      }
-    }
-    if (ctx.colors) ctx.stylize = stylizeWithColor;
-    if (ctx.maxArrayLength === null) ctx.maxArrayLength = Infinity;
-    if (ctx.maxStringLength === null) ctx.maxStringLength = Infinity;
-    return formatValue(ctx, value, 0);
-  }
-  inspect.custom = customInspectSymbol;
-  
-  ObjectDefineProperty(inspect, 'defaultOptions', {
+inspect.custom = customInspectSymbol;
+
+ObjectDefineProperty(inspect, 'defaultOptions', {
+  __proto__: null,
+  get() {
+    return inspectDefaultOptions;
+  },
+  set(options) {
+    validateObject(options, 'options');
+    return ObjectAssign(inspectDefaultOptions, options);
+  },
+});
+
+// Set Graphics Rendition https://en.wikipedia.org/wiki/ANSI_escape_code#graphics
+// Each color consists of an array with the color code as first entry and the
+// reset code as second entry.
+const defaultFG = 39;
+const defaultBG = 49;
+inspect.colors = {
+  __proto__: null,
+  reset: [0, 0],
+  bold: [1, 22],
+  dim: [2, 22], // Alias: faint
+  italic: [3, 23],
+  underline: [4, 24],
+  blink: [5, 25],
+  // Swap foreground and background colors
+  inverse: [7, 27], // Alias: swapcolors, swapColors
+  hidden: [8, 28], // Alias: conceal
+  strikethrough: [9, 29], // Alias: strikeThrough, crossedout, crossedOut
+  doubleunderline: [21, 24], // Alias: doubleUnderline
+  black: [30, defaultFG],
+  red: [31, defaultFG],
+  green: [32, defaultFG],
+  yellow: [33, defaultFG],
+  blue: [34, defaultFG],
+  magenta: [35, defaultFG],
+  cyan: [36, defaultFG],
+  white: [37, defaultFG],
+  bgBlack: [40, defaultBG],
+  bgRed: [41, defaultBG],
+  bgGreen: [42, defaultBG],
+  bgYellow: [43, defaultBG],
+  bgBlue: [44, defaultBG],
+  bgMagenta: [45, defaultBG],
+  bgCyan: [46, defaultBG],
+  bgWhite: [47, defaultBG],
+  framed: [51, 54],
+  overlined: [53, 55],
+  gray: [90, defaultFG], // Alias: grey, blackBright
+  redBright: [91, defaultFG],
+  greenBright: [92, defaultFG],
+  yellowBright: [93, defaultFG],
+  blueBright: [94, defaultFG],
+  magentaBright: [95, defaultFG],
+  cyanBright: [96, defaultFG],
+  whiteBright: [97, defaultFG],
+  bgGray: [100, defaultBG], // Alias: bgGrey, bgBlackBright
+  bgRedBright: [101, defaultBG],
+  bgGreenBright: [102, defaultBG],
+  bgYellowBright: [103, defaultBG],
+  bgBlueBright: [104, defaultBG],
+  bgMagentaBright: [105, defaultBG],
+  bgCyanBright: [106, defaultBG],
+  bgWhiteBright: [107, defaultBG],
+};
+
+function defineColorAlias(target, alias) {
+  ObjectDefineProperty(inspect.colors, alias, {
     __proto__: null,
     get() {
-      return inspectDefaultOptions;
+      return this[target];
     },
-    set(options) {
-      validateObject(options, 'options');
-      return ObjectAssign(inspectDefaultOptions, options);
+    set(value) {
+      this[target] = value;
     },
+    configurable: true,
+    enumerable: false,
   });
-  
+}
+
+defineColorAlias('gray', 'grey');
+defineColorAlias('gray', 'blackBright');
+defineColorAlias('bgGray', 'bgGrey');
+defineColorAlias('bgGray', 'bgBlackBright');
+defineColorAlias('dim', 'faint');
+defineColorAlias('strikethrough', 'crossedout');
+defineColorAlias('strikethrough', 'strikeThrough');
+defineColorAlias('strikethrough', 'crossedOut');
+defineColorAlias('hidden', 'conceal');
+defineColorAlias('inverse', 'swapColors');
+defineColorAlias('inverse', 'swapcolors');
+defineColorAlias('doubleunderline', 'doubleUnderline');
+
+// TODO(BridgeAR): Add function style support for more complex styles.
+// Don't use 'blue' not visible on cmd.exe
+inspect.styles = ObjectAssign({ __proto__: null }, {
+  special: 'cyan',
+  number: 'yellow',
+  bigint: 'yellow',
+  boolean: 'yellow',
+  undefined: 'grey',
+  null: 'bold',
+  string: 'green',
+  symbol: 'green',
+  date: 'magenta',
+  // "name": intentionally not styling
+  // TODO(BridgeAR): Highlight regular expressions properly.
+  regexp: 'red',
+  module: 'underline',
+});

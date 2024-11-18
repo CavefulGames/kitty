@@ -3,6 +3,7 @@ local errorMain = require(script.Parent:WaitForChild('mainError'))
 local safeWeakMap = require(script.Parent:WaitForChild('safeMap'))
 local colors = require(script.Parent:WaitForChild('colors'))
 local primordials = require(script.Parent:WaitForChild('primordials'))
+local inspect = require(script.Parent:WaitForChild('inspect'))
 
 local errorCodes = errorMain.codes
 local isStackOverflowError = errorMain.isStackOverflowError
@@ -389,7 +390,20 @@ function console.warn(self, ...)
 end
 
 function console.dir(self, object, options)
-    self:kWriteToConsole(kUseStdout, )
+    self:kWriteToConsole(kUseStdout, inspect(object, (function() 
+        local result = {}
+        result.customInspect = false
+
+        for k, v in self:kGetInspectOptions(self._stdout) do
+            result[k] = v
+        end
+
+        for k, v in options do
+            result[k] = v
+        end
+        
+        return result
+    end)()))
 end
 
 return setmetatable({}, {})
