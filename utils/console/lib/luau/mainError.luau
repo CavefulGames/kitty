@@ -129,7 +129,7 @@ local function makeErrorWithCode(base, key)
             }
             return self
         end
-
+        
         nodeError.constructor = function()
             return base
         end

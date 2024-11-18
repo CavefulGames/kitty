@@ -129,16 +129,16 @@ function Console(options /* or: stdout, stderr, ignoreErrors = true */) {
                     0, kMaxGroupIndentation);
   }
 
-  // if (inspectOptions !== undefined) {
-  //   validateObject(inspectOptions, 'options.inspectOptions');
+  if (inspectOptions !== undefined) {
+    validateObject(inspectOptions, 'options.inspectOptions');
 
-  //   if (inspectOptions.colors !== undefined &&
-  //       options.colorMode !== undefined) {
-  //     throw new ERR_INCOMPATIBLE_OPTION_PAIR(
-  //       'options.inspectOptions.color', 'colorMode');
-  //   }
-  //   optionsMap.set(this, inspectOptions);
-  // }
+    if (inspectOptions.colors !== undefined &&
+        options.colorMode !== undefined) {
+      throw new ERR_INCOMPATIBLE_OPTION_PAIR(
+        'options.inspectOptions.color', 'colorMode');
+    }
+    optionsMap.set(this, inspectOptions);
+  }
 
   // Bind the prototype functions to this Console instance
   ArrayPrototypeForEach(ObjectKeys(Console.prototype), (key) => {
