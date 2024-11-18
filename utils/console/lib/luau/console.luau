@@ -1,6 +1,8 @@
 --!strict
 local primordials = require(script.Parent:WaitForChild('primordials'))
-local errorCodes = require(script.Parent:WaitForChild('mainError')).codes
+local errorMain = require(script.Parent:WaitForChild('mainError'))
+local errorCodes = errorMain.codes
+local isStackOverflowError = errorMain.isStackOverflowError
 local safeWeakMap = require(script.Parent:WaitForChild('safeMap'))
 
 export type Console = typeof(setmetatable({} :: {
@@ -10,67 +12,67 @@ export type Console = typeof(setmetatable({} :: {
         writable: any,
         configurable: any,
         value: any,
-    }?,
+    },
     _stderr: { 
         kBindStreamsEager: any,
         enumerable: any,
         writable: any,
         value: any,
-    }?,
+    },
     _stdoutErrorHandler: {
         kBindStreamsEager: any,
         enumerable: any,
         writable: any,
         value: any,
-    }?,
+    },
     _stderrErrorHandler: {
         kBindStreamsEager: any,
         enumerable: any,
         writable: any,
         value: any,
-    }?,
+    },
     _ignoreErrors: {
         kBindStreamsEager: any,
         enumerable: any,
         writable: any,
         value: boolean,
-    }?,
+    },
     _times: {
         kBindStreamsEager: any,
         enumerable: any,
         writable: any,
         value: safeWeakMap.SafeMap,
-    }?,
+    },
     kCounts: {
         kBindStreamsEager: any,
         enumerable: any,
         writable: any,
         value: safeWeakMap.SafeMap,
-    }?,
+    },
     kColorMode: {
         kBindStreamsEager: any,
         enumerable: any,
         writable: any,
         value: any,
-    }?,
+    },
     kIsConsole: {
         kBindStreamsEager: any,
         enumerable: any,
         writable: any,
         value: boolean,
-    }?,
+    },
     kGroupIndentationWidth: {
         kBindStreamsEager: any,
         enumerable: any,
         writable: any,
         value: number,
-    }?,
+    },
     SymbolToStringTag: {
         writable: boolean,
         enumerable: boolean,
         configurable: boolean,
         value: string,
-    }?,
+    },
 }, {} :: ConsoleImpl))
 
 type ConsoleImpl = {
@@ -81,6 +83,7 @@ type ConsoleImpl = {
     kBindStreamsEager: (self: Console, stdout: any, stderr: any) -> (),
     kBindStreamsLazy: (self: Console, object: any) -> (),
     kBindProperties: (self: Console, ignoreErrors: any, colorMode: any, groupIndentation: number?) -> (),
+    kWriteToConsole: (self: Console, streamSymbol: any, str: string) -> (),
 }
 
 local ERR_CONSOLE_WRITABLE_STREAM = errorCodes.ERR_CONSOLE_WRITABLE_STREAM
@@ -95,6 +98,7 @@ local kUseStderr = 'kUseStderr'
 local kCounts = 'kCounts'
 local kColorMode = 'kColorMode'
 local kGroupIndentationWidth = 'kGroupIndentationWidth'
+local kWriteToConsole = 'kWriteToConsole'
 local SymbolToStringTag = 'SymbolToStringTag'
 
 local kMaxGroupIndentation = 1000
@@ -118,8 +122,8 @@ local function createWriteErrorHandler(instance, streamSymbol)
         local stream = if streamSymbol == kUseStdout then
             instance._stdout else instance._stderr
         if err ~= nil and not stream._writableState.errorEmitted then
-            if (stream :: any).listenerCount('error') == 0 then
-                (stream :: any).once('error', noop)
+            if (stream.value :: any).listenerCount('error') == 0 then
+                (stream.value :: any ).once('error', noop)
             end
         end
     end
@@ -178,7 +182,7 @@ function console.new(options, stderr, ignoreErrors)
     self[kBindStreamsEager](stdout, stderr)
     self[kBindProperties](ignoreErrors, colorMode, groupIndentation)
 
-    return self
+    return self :: any
 end
 
 function console.__call(...)
@@ -297,6 +301,42 @@ function console.kBindProperties(self, ignoreErrors, colorMode, groupIndentation
         configurable = true,
         value = 'console',
     }
+end
+
+function console.kWriteToConsole(self, streamSymbol, str)
+    local ignoreErrors = self._ignoreErrors
+    local groupIndent = internalIndentationMap.get(self :: any) or ''
+
+    local useStdout = streamSymbol == kUseStdout
+    local stream = if useStdout then self._stdout else self._stderr
+    local errorHandler = if useStdout then 
+        self._stderrErrorHandler else self._stderrErrorHandler
+
+    if #groupIndent ~= 0 then
+        if string.find(str, "\n") then
+            str = string.gsub(str, "\n", "\n" .. groupIndent)
+        end
+        str = groupIndent .. str
+    end
+    str ..= '\n'
+
+    if ignoreErrors.value == false then return stream.value.write(str) end
+
+    local b, e = pcall(function() 
+        if stream.value.listenerCount('error') == 0 then
+            stream.value.once('error', noop)
+        end
+
+        stream.value.write(str, errorHandler)
+    end)
+
+    if b then
+        if isStackOverflowError(e) then
+            error(e)
+        end
+    else
+        stream.value.removeListener('error', noop)
+    end
 end
 
 return setmetatable({}, {})

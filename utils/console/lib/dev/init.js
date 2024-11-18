@@ -267,7 +267,7 @@ ObjectDefineProperties(Console.prototype, {
       const useStdout = streamSymbol === kUseStdout;
       const stream = useStdout ? this._stdout : this._stderr;
       const errorHandler = useStdout ?
-        this._stdoutErrorHandler : this._stderrErrorHandler;
+        this._stderrErrorHandler : this._stderrErrorHandler;
 
       if (groupIndent.length !== 0) {
         if (StringPrototypeIncludes(string, '\n')) {
