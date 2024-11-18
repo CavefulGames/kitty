@@ -91,6 +91,8 @@ type ConsoleImpl = {
     kFormatForStderr: (self: Console, args: any) -> (any),
 
     log: (self: Console, ...any) -> (),
+    warn: (self: Console, ...any) -> (),
+    dir: (self: Console, object: any, options: any) -> (),
 }
 
 local ERR_CONSOLE_WRITABLE_STREAM = errorCodes.ERR_CONSOLE_WRITABLE_STREAM
@@ -377,7 +379,17 @@ function console.kFormatForStderr(self, args)
 end
 
 function console.log(self, ...)
-    -- selfLkWriteToConsole(kUseStdout, )
+    local args = { ... }
+    self:kWriteToConsole(kUseStdout, self:kFormatForStdout(args))
+end
+
+function console.warn(self, ...)
+    local args = { ... }
+    self:kWriteToConsole(kUseStderr, self:kFormatForStderr(args))
+end
+
+function console.dir(self, object, options)
+    self:kWriteToConsole(kUseStdout, )
 end
 
 return setmetatable({}, {})
