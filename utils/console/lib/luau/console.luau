@@ -94,6 +94,14 @@ type ConsoleImpl = {
     log: (self: Console, ...any) -> (),
     warn: (self: Console, ...any) -> (),
     dir: (self: Console, object: any, options: any) -> (),
+
+    --// todo (make a time's)
+    time: (self: Console, label: any) -> (),
+    timeEnd: (self: Console, label: any) -> (),
+    timeLog: (self: Console, label: any) -> (),
+
+    trace: (self: Console, ...any) -> (),
+    assert: (self: Console, expression: any, ...any) -> (),
 }
 
 local ERR_CONSOLE_WRITABLE_STREAM = errorCodes.ERR_CONSOLE_WRITABLE_STREAM
@@ -404,6 +412,29 @@ function console.dir(self, object, options)
         
         return result
     end)()))
+end
+
+function console.trace(self, ...)
+    local args = { ... }
+    local err = {
+        name = 'Trace',
+        message = self:kFormatForStderr(args)
+    }
+    err.stack = debug.traceback("", 2)
+    self:warn(err.stack)
+end
+
+function console.assert(self, expression, ...)
+    local args = { ... }
+    if not expression then
+        if args[1] and typeof(args[1]) == 'string' then
+            args[1] = `Assertion failed: {args[1]}`
+        else
+            primordials.arrayPrototypeUnshift(args, 'Assertion failed')
+        end
+
+        primordials.reflectApply(self.warn, self, args)
+    end
 end
 
 return setmetatable({}, {})
