@@ -1,9 +1,11 @@
 --!strict
-local primordials = require(script.Parent:WaitForChild('primordials'))
 local errorMain = require(script.Parent:WaitForChild('mainError'))
+local safeWeakMap = require(script.Parent:WaitForChild('safeMap'))
+local colors = require(script.Parent:WaitForChild('colors'))
+local primordials = require(script.Parent:WaitForChild('primordials'))
+
 local errorCodes = errorMain.codes
 local isStackOverflowError = errorMain.isStackOverflowError
-local safeWeakMap = require(script.Parent:WaitForChild('safeMap'))
 
 export type Console = typeof(setmetatable({} :: {
     _stdout: { 
@@ -84,6 +86,11 @@ type ConsoleImpl = {
     kBindStreamsLazy: (self: Console, object: any) -> (),
     kBindProperties: (self: Console, ignoreErrors: any, colorMode: any, groupIndentation: number?) -> (),
     kWriteToConsole: (self: Console, streamSymbol: any, str: string) -> (),
+    kGetInspectOptions: (self: Console, stream: any) -> (any),
+    kFormatForStdout: (self: Console, args: any) -> (any),
+    kFormatForStderr: (self: Console, args: any) -> (any),
+
+    log: (self: Console, ...any) -> (),
 }
 
 local ERR_CONSOLE_WRITABLE_STREAM = errorCodes.ERR_CONSOLE_WRITABLE_STREAM
@@ -100,6 +107,7 @@ local kColorMode = 'kColorMode'
 local kGroupIndentationWidth = 'kGroupIndentationWidth'
 local kWriteToConsole = 'kWriteToConsole'
 local SymbolToStringTag = 'SymbolToStringTag'
+local kFormatForStdout = 'kFormatForStdout'
 
 local kMaxGroupIndentation = 1000
 local optionsMap = safeWeakMap.new()
@@ -337,6 +345,39 @@ function console.kWriteToConsole(self, streamSymbol, str)
     else
         stream.value.removeListener('error', noop)
     end
+end
+
+function console.kGetInspectOptions(self, stream)
+    local color = self[kColorMode]
+    if color == 'auto' then
+        color = colors.shouldColorize(stream)
+    end
+
+    local options = optionsMap:get(self)
+    if options then
+        if options.colors == nil then
+            options.colors = color
+        end
+        return options
+    end
+
+    return if color then kColorInspectOptions else kNoColorInspectOptions
+end
+
+function console.kFormatForStdout(self, args)
+    local opts = self:kGetInspectOptions(self._stdout)
+    args = primordials.arrayPrototypeUnshift(args, opts)
+    return primordials.reflectApply(string.format, nil, table.unpack(args))
+end
+
+function console.kFormatForStderr(self, args)
+    local opts = self:kGetInspectOptions(self._stderr)
+    args = primordials.arrayPrototypeUnshift(args, opts)
+    return primordials.reflectApply(string.format, nil, table.unpack(args))
+end
+
+function console.log(self, ...)
+    -- selfLkWriteToConsole(kUseStdout, )
 end
 
 return setmetatable({}, {})

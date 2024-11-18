@@ -3,3 +3,5 @@
 console 완성 -> gear 완성 -> discord 어쩌구 완성
 
 TODO: validateOneOf 만들기
+self 구조 바꿔야함 (노가다)
+file 구조 바꿔야함 (노가다)
