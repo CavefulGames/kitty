@@ -21,6 +21,14 @@ local function objectKeys(obj)
     return result
 end
 
+local function objectValues(obj)
+    local result = {}
+    for v, _ in obj do
+        table.insert(result, v)
+    end
+    return result
+end
+
 local function objectAssign(...)
     local args = { ... }
     local arr = args[1]
@@ -142,6 +150,7 @@ return {
     mathMaxApply=mathMaxApply,
     mathMax=mathMax,
     objectKeys=objectKeys,
+    objectValues=objectValues,
     objectAssign=objectAssign,
     isArray=isArray,
     isObject=isObject,

@@ -130,6 +130,11 @@ local SymbolToStringTag = 'SymbolToStringTag'
 local kFormatForStdout = 'kFormatForStdout'
 
 local kMaxGroupIndentation = 1000
+local keyKey = 'Key'
+local valuesKey = 'Values'
+local indexKey = '(index)'
+local iterKey = '(iteration index)'
+
 local optionsMap = safeWeakMap.new()
 local internalIndentationMap = safeWeakMap.new()
 
@@ -538,10 +543,7 @@ function console.table(self, tabularData, properties)
         return result
     end
 
-    local mapIter = tabularData
-    local isKeyValue = false
     local i = 1
-
     
     local map = {}
     local hasPrimitives = false
@@ -550,14 +552,63 @@ function console.table(self, tabularData, properties)
 
     while i < #indexKeyArray + 1 do
         local item = tabularData[indexKeyArray[i]]
-        local primitive = item == nil or (typeof(item) ~= 'function' and not primordials.isObject(item))
-
-        
-        
-
+        local primitive = item == nil or 
+            (typeof(item) ~= 'function' and not primordials.isObject(item))
+        if properties == nil and primitive then
+            hasPrimitives = true
+            valuesKeyArray[i] = _inspect(item)
+        else
+            local keys = properties or primordials.objectKeys(item)
+            for key in keys do
+                map[key] = if map[key] == nil then {} else map[key]
+                if (primitive and properties) or item[key] == nil then
+                    map[key][i] = ''
+                else
+                    map[key][i] = _inspect(item[key])
+                end
+            end
+        end
 
         i += 1
     end
+
+    local keys = primordials.objectKeys(map)
+    local values = primordials.objectValues(map)
+
+    if hasPrimitives then
+        table.insert(keys, valuesKey)
+        table.insert(keys, valuesKeyArray)
+    end
+    keys = primordials.arrayPrototypeUnshift(keys, indexKey)
+    values = primordials.arrayPrototypeUnshift(values, indexKeyArray)
+
+    return final(keys, values)
+end
+
+local consoleMethods = {}
+consoleMethods.log = console.log
+consoleMethods.warn = console.warn
+consoleMethods.dir = console.dir
+consoleMethods.time = console.time
+consoleMethods.timeEnd = console.timeEnd
+consoleMethods.timeLog = console.timeLog
+consoleMethods.trace = console.trace
+consoleMethods.assert = console.assert
+consoleMethods.clear = console.clear
+consoleMethods.count = console.count
+consoleMethods.countReset = console.countReset
+consoleMethods.group = console.group
+consoleMethods.groupEnd = console.groupEnd
+consoleMethods.table = console.table
+
+consoleMethods.debug = console.log
+consoleMethods.info = console.log
+consoleMethods.dirxml = console.log
+consoleMethods.error = console.warn
+consoleMethods.groupCollapsed = console.group
+
+local function initializeGlobalConsole(globalConsol)
+
 end
 
 return setmetatable({}, {})
