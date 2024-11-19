@@ -120,5 +120,6 @@ return {
     validateInteger = validateInteger,
     validatePort = validatePort,
     assert = assert,
+    new=TypeError.new,
     ERR_CODES = ERR_CODES
 }

@@ -174,7 +174,7 @@ function console.new(options, stderr, ignoreErrors)
         }
     end
 
-    local self = setmetatable({}, console)
+    local self = setmetatable({}, console) :: Console
 
     local stdout = options.stdout
     stderr = options.stderr or stdout
@@ -206,14 +206,14 @@ function console.new(options, stderr, ignoreErrors)
         end
 
         if inspectOptions.colors ~= nil and options.colorMode ~= nil then
-            error(ERR_CONSOLE_WRITABLE_STREAM('options.inspectOptions.color', 'colorMode'))
+            error(ERR_INCOMPATIBLE_OPTION_PAIR('options.inspectOptions.color', 'colorMode'))
         end
 
         optionsMap:set(self, inspectOptions)
     end
 
-    self[kBindStreamsEager](stdout, stderr)
-    self[kBindProperties](ignoreErrors, colorMode, groupIndentation)
+    self:kBindStreamsEager(stdout, stderr)
+    self:kBindProperties(ignoreErrors, colorMode, groupIndentation)
 
     return self :: any
 end
@@ -392,13 +392,13 @@ end
 function console.kFormatForStdout(self, args)
     local opts = self:kGetInspectOptions(self._stdout)
     args = primordials.arrayPrototypeUnshift(args, opts)
-    return primordials.reflectApply(string.format, nil, (args))
+    return primordials.reflectApply(primordials.formatWithOptions, nil, {args[2], args[1]})
 end
 
 function console.kFormatForStderr(self, args)
     local opts = self:kGetInspectOptions(self._stderr)
     args = primordials.arrayPrototypeUnshift(args, opts)
-    return primordials.reflectApply(string.format, nil, (args))
+    return primordials.reflectApply(primordials.formatWithOptions, nil, {args[2], args[1]})
 end
 
 function console.log(self, ...)

@@ -81,106 +81,172 @@ local function getMessage(key, args, self)
     return reflectApply(lazyInternalUtilInspect().format, nil, (args))
 end
 
+--[=[
+-- local function makeErrorWithCode(base, key)
+--     local msg = message:get(key)
+--     local expectedLength = if typeof(msg) ~= 'string' then -1 else #msg
+
+--     if expectedLength == 0 then
+--         local nodeError = (base)
+--         nodeError.__index = nodeError
+
+--         nodeError.ne = function(...)
+--             local args = { ... }
+
+--             assert(#args == 0, `Code: {key}; The provided arguments length ({#args}) does not `
+--             ..`match the required ones ({expectedLength}).`)
+
+--             local self = setmetatable(base.new(msg), nodeError)
+--             self.code = key
+--             return self
+--         end
+
+--         nodeError.constructor = function()
+--             return base
+--         end
+
+--         nodeError.kIsNodeError = function()
+--             return true
+--         end
+
+--         nodeError.__string = function(self)
+--             return `{self.name} [{key}]: {self.message}`
+--         end
+--         nodeError.__call = nodeError.new
+
+--         return setmetatable({}, nodeError)
+--     elseif expectedLength == -1 then
+--         local nodeError = (base)
+--         nodeError.__index = nodeError
+
+--         nodeError.new = function(...)
+--             local args = { ... }
+
+--             assert(#args == 0, `Code: {key}; The provided arguments length ({#args}) does not `
+--             ..`match the required ones ({expectedLength}).`)
+
+--             local self = setmetatable(base.new(), nodeError)
+--             self.code = key
+--             self.message = {
+--                 value = getMessage(key, args, self),
+--                 enumerable = false,
+--                 writable = true,
+--                 configurable = true,
+--             }
+--             return self
+--         end
+        
+--         nodeError.constructor = function()
+--             return base
+--         end
+
+--         nodeError.kIsNodeError = function()
+--             return true
+--         end
+
+--         nodeError.__string = function(self)
+--             return `{self.name} [{key}]: {self.message}`
+--         end
+--         nodeError.__call = nodeError.new
+
+--         return setmetatable({}, nodeError)
+--     else
+--         local nodeError = (base)
+--         nodeError.__index = nodeError
+
+--         nodeError.new = function(...)
+--             local args = { ... }
+
+--             assert(
+--                 #args == expectedLength,
+--                 `Code: {key}; The provided arguments length ({#args}) does not ` 
+--                 ..`match the required ones (${expectedLength}).`
+--             );
+
+--             args = arrayPrototypeUnshift(args, msg)
+--             local self = setmetatable(base.new(reflectApply(lazyInternalUtilInspect().format, nil, table.unpack(args))), nodeError)
+--             self.code = key
+            
+--             return self
+--         end
+
+--         nodeError.constructor = function()
+--             return base
+--         end
+
+--         nodeError.kIsNodeError = function()
+--             return true
+--         end
+
+--         nodeError.__string = function(self)
+--             return `{self.name} [{key}]: {self.message}`
+--         end
+--         nodeError.__call = nodeError.new
+
+--         return setmetatable({}, nodeError)
+--     end
+-- endw
+--]=]
+
 local function makeErrorWithCode(base, key)
     local msg = message:get(key)
     local expectedLength = if typeof(msg) ~= 'string' then -1 else #msg
 
-    if expectedLength == 0 then
-        local nodeError = (base)
-
-        nodeError.new = function(...)
+    local nodeError = {}
+    nodeError = {
+        __index = base,
+        new = function(...)
             local args = { ... }
-
-            assert(#args == 0, `Code: {key}; The provided arguments length ({#args}) does not `
-            ..`match the required ones ({expectedLength}).`)
-
-            local self = setmetatable(base.new(msg), nodeError)
-            self.code = key
-            return self
-        end
-
-        nodeError.constructor = function()
-            return base
-        end
-
-        nodeError.kIsNodeError = function()
-            return true
-        end
-
-        nodeError.__string = function(self)
-            return `{self.name} [{key}]: {self.message}`
-        end
-        nodeError.__call = nodeError.new
-
-        return setmetatable({}, nodeError)
-    elseif expectedLength == -1 then
-        local nodeError = (base)
-
-        nodeError.new = function(...)
-            local args = { ... }
-
-            assert(#args == 0, `Code: {key}; The provided arguments length ({#args}) does not `
-            ..`match the required ones ({expectedLength}).`)
-
-            local self = setmetatable(base.new(), nodeError)
-            self.code = key
-            self.message = {
-                value = getMessage(key, args, self),
-                enumerable = false,
-                writable = true,
-                configurable = true,
-            }
-            return self
-        end
-        
-        nodeError.constructor = function()
-            return base
-        end
-
-        nodeError.kIsNodeError = function()
-            return true
-        end
-
-        nodeError.__string = function(self)
-            return `{self.name} [{key}]: {self.message}`
-        end
-        nodeError.__call = nodeError.new
-
-        return setmetatable({}, nodeError)
-    else
-        local nodeError = (base)
-
-        nodeError.new = function(...)
-            local args = { ... }
-
-            assert(
-                #args == expectedLength,
-                `Code: {key}; The provided arguments length ({#args}) does not ` 
-                ..`match the required ones (${expectedLength}).`
-            );
-
-            args = arrayPrototypeUnshift(args, msg)
-            local self = setmetatable(base.new(reflectApply(lazyInternalUtilInspect().format, nil, table.unpack(args))), nodeError)
-            self.code = key
             
-            return self
+            --[=[ 
+                Check arguments length
+                if expectedLength >= 0 and #args ~= expectedLength then
+                    error(string.format(
+                        "Code: %s; The provided arguments length (%d) does not match the required ones (%d)",
+                        key, #args, expectedLength
+                    ))
+                end 
+            ]=]
+            
+            -- Create new error instance
+            local instance
+            if expectedLength == 0 then
+                -- Simple error with just the message
+                instance = base.new(msg)
+            else
+                -- Format message with arguments
+                local formattedMsg
+                if typeof(msg) == 'function' then
+                    formattedMsg = msg(table.unpack(args))
+                else
+                    args = arrayPrototypeUnshift(args, msg)
+                    formattedMsg = reflectApply(lazyInternalUtilInspect().format, nil, table.unpack(args))
+                end
+                instance = base.new(formattedMsg)
+            end
+            
+            -- Set error properties
+            instance.code = key
+            
+            return setmetatable(instance, nodeError)
+        end,
+        
+        constructor = base,
+        
+        kIsNodeError = true,
+        
+        __tostring = function(self)
+            return string.format("%s [%s]: %s", self.name, key, self.message)
         end
-
-        nodeError.constructor = function()
-            return base
-        end
-
-        nodeError.kIsNodeError = function()
-            return true
-        end
-
-        nodeError.__string = function(self)
-            return `{self.name} [{key}]: {self.message}`
-        end
-        nodeError.__call = nodeError.new
-
-        return setmetatable({}, nodeError)
-    end
+    }
+    
+    -- Make the constructor callable
+    return setmetatable({}, {
+        __call = function(_, ...)
+            return (nodeError :: any).new(...)
+        end,
+        __index = nodeError
+    })
 end
 
 local function makeErrorForHideStackFrame(base, clazz)

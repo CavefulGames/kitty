@@ -6,7 +6,11 @@ local function reflectApply(target, self, args, ...)
     if typeof(args) ~= 'table' then
         args = { args, ... }
     end
-    return target(self, table.unpack(args))
+    if self == nil then
+        return target(table.unpack(args))
+    else
+        return target(self, table.unpack(args))
+    end
 end
 
 local function arrayPrototypeUnshift(arr, ...)
@@ -142,12 +146,20 @@ local function isObject(arr)
     return true
 end
 
+local function formatWithOptions(str, arr)
+    for k, v in arr do
+        (str::string):format(v)
+    end
+    return str
+end
+
 return {
     arrayPrototypeUnshift=arrayPrototypeUnshift,
     arrayPrototypeMap=arrayPrototypeMap,
     arrayPrototypeJoin=arrayPrototypeJoin,
     reflectConstruct=reflectConstruct,
     reflectApply=reflectApply,
+    formatWithOptions=formatWithOptions,
     stringPrototypeRepeat=stringPrototypeRepeat,
     stringPrototypeSlice=stringPrototypeSlice,
     mathMaxApply=mathMaxApply,
