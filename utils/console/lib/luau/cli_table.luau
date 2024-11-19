@@ -30,6 +30,10 @@ local function renderRow(row: { [number]: string }, columnWidths: { [number]: nu
         local len: number = #cell
         local needed: number = (columnWidths[i] - len)
 
+        if typeof(cell) == 'table' then
+            cell = table.concat(cell)
+        end
+
         out ..= cell .. stringPrototypeRepeat(' ', math.round(needed))
         if i ~= #row - 1 then
             out ..= tableChars.middle
@@ -39,7 +43,7 @@ local function renderRow(row: { [number]: string }, columnWidths: { [number]: nu
     return out
 end
 
-local function tableFunction(head: { [number]: string }, columns: { [number]: string })
+local function tableFunction(head: { [number]: string }, columns: { [number]: any })
     local rows = {} :: { [number]: { [number]: string } }
     local columnWidths = arrayPrototypeMap(head, function(v, i)
         return #v
@@ -51,16 +55,24 @@ local function tableFunction(head: { [number]: string }, columns: { [number]: st
     for i=1, #head do
         local column = columns[i]
         for j = 1, longestColumn do
-            if not rows[j] then
-                local s, ss = column:find(tostring(j))
+            if rows[j] == nil then
                 rows[j] = {}
-                rows[j][i] = if s then column:sub(s, ss) else ''
-                
-                local value: string = rows[j][i]
-                local width: number = columnWidths[i] or 0
-                local counted: number = #value
-                columnWidths[i] = mathMax(width, counted)
             end
+            rows[j][i] = if 
+                typeof(column) == 'table' and table.find(column, j) then 
+                    column[j] else ''
+            local value = rows[j][i]
+            local width = columnWidths[i] or 0
+            local counted = #value
+            columnWidths[i] = mathMax(width, counted)
+                -- local s, ss = column:find(tostring(j))
+                -- rows[j] = {}
+                -- rows[j][i] = if s then column:sub(s, ss) else ''
+                
+                -- local value: string = rows[j][i]
+                -- local width: number = columnWidths[i] or 0
+                -- local counted: number = #value
+                -- columnWidths[i] = mathMax(width, counted)
         end
     end
 

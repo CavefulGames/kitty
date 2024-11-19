@@ -112,6 +112,13 @@ type ConsoleImpl = {
     group: (self: Console, ...any) -> (),
     groupEnd: (self: Console) -> (),
     table: (self: Console, tabularData: any, properties: any) -> (any),
+
+    --// pulsing
+    debug: (self: Console, ...any) -> (),
+    info: (self: Console, ...any) -> (),
+    dirxml: (self: Console, ...any) -> (),
+    error: (self: Console, ...any) -> (),
+    groupCollapsed: (self: Console, ...any) -> (),
 }
 
 local ERR_CONSOLE_WRITABLE_STREAM = errorCodes.ERR_CONSOLE_WRITABLE_STREAM
@@ -587,28 +594,10 @@ function console.table(self, tabularData, properties)
     return final(keys, values)
 end
 
-local consoleMethods = {}
-consoleMethods.new = console.new
+console.debug = console.log
+console.info = console.log
+console.dirxml = console.log
+console.error = console.warn
+console.groupCollapsed = console.group
 
-consoleMethods.log = console.log
-consoleMethods.warn = console.warn
-consoleMethods.dir = console.dir
-consoleMethods.time = console.time
-consoleMethods.timeEnd = console.timeEnd
-consoleMethods.timeLog = console.timeLog
-consoleMethods.trace = console.trace
-consoleMethods.assert = console.assert
-consoleMethods.clear = console.clear
-consoleMethods.count = console.count
-consoleMethods.countReset = console.countReset
-consoleMethods.group = console.group
-consoleMethods.groupEnd = console.groupEnd
-consoleMethods.table = console.table
-
-consoleMethods.debug = console.log
-consoleMethods.info = console.log
-consoleMethods.dirxml = console.log
-consoleMethods.error = console.warn
-consoleMethods.groupCollapsed = console.group
-
-return consoleMethods
+return console
