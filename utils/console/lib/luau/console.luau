@@ -586,6 +586,8 @@ function console.table(self, tabularData, properties)
 end
 
 local consoleMethods = {}
+consoleMethods.new = console.new
+
 consoleMethods.log = console.log
 consoleMethods.warn = console.warn
 consoleMethods.dir = console.dir
@@ -607,8 +609,5 @@ consoleMethods.dirxml = console.log
 consoleMethods.error = console.warn
 consoleMethods.groupCollapsed = console.group
 
-local function initializeGlobalConsole(globalConsol)
 
-end
-
-return setmetatable({}, {})
+return consoleMethods
