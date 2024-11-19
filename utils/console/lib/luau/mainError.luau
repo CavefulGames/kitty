@@ -15,7 +15,10 @@ local getOwnPropertyDescriptor = require(script.Parent:WaitForChild('getOwnPrope
 local reflectApply = primordials.reflectApply
 local arrayPrototypeUnshift = primordials.arrayPrototypeUnshift
 
-local hideStackFramesError = setmetatable({ __hideStackFramesError = true }, {}) 
+local hideStackFramesError = setmetatable({ 
+    __hideStackFramesError = true, 
+    name = 'defult',
+}, {}) 
 
 local function assert(_if, _message)
     if _if then
@@ -75,15 +78,15 @@ local function getMessage(key, args, self)
     end
 
     args = arrayPrototypeUnshift(args, msg)
-    return reflectApply(lazyInternalUtilInspect().format, nil, table.unpack(args))
+    return reflectApply(lazyInternalUtilInspect().format, nil, (args))
 end
 
 local function makeErrorWithCode(base, key)
-    local msg = message.get(key)
+    local msg = message:get(key)
     local expectedLength = if typeof(msg) ~= 'string' then -1 else #msg
 
     if expectedLength == 0 then
-        local nodeError = getmetatable(base)
+        local nodeError = (base)
 
         nodeError.new = function(...)
             local args = { ... }
@@ -111,7 +114,7 @@ local function makeErrorWithCode(base, key)
 
         return setmetatable({}, nodeError)
     elseif expectedLength == -1 then
-        local nodeError = getmetatable(base)
+        local nodeError = (base)
 
         nodeError.new = function(...)
             local args = { ... }
@@ -145,7 +148,7 @@ local function makeErrorWithCode(base, key)
 
         return setmetatable({}, nodeError)
     else
-        local nodeError = getmetatable(base)
+        local nodeError = (base)
 
         nodeError.new = function(...)
             local args = { ... }
@@ -181,7 +184,7 @@ local function makeErrorWithCode(base, key)
 end
 
 local function makeErrorForHideStackFrame(base, clazz)
-    local nodeError = getmetatable(base)
+    local nodeError = (base)
 
     nodeError.new = function(...)
         local args = { ... }

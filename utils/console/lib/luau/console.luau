@@ -338,7 +338,7 @@ end
 
 function console.kWriteToConsole(self, streamSymbol, str)
     local ignoreErrors = self._ignoreErrors
-    local groupIndent = internalIndentationMap.get(self :: any) or ''
+    local groupIndent = internalIndentationMap:get(self) or ''
 
     local useStdout = streamSymbol == kUseStdout
     local stream = if useStdout then self._stdout else self._stderr
@@ -392,13 +392,13 @@ end
 function console.kFormatForStdout(self, args)
     local opts = self:kGetInspectOptions(self._stdout)
     args = primordials.arrayPrototypeUnshift(args, opts)
-    return primordials.reflectApply(string.format, nil, table.unpack(args))
+    return primordials.reflectApply(string.format, nil, (args))
 end
 
 function console.kFormatForStderr(self, args)
     local opts = self:kGetInspectOptions(self._stderr)
     args = primordials.arrayPrototypeUnshift(args, opts)
-    return primordials.reflectApply(string.format, nil, table.unpack(args))
+    return primordials.reflectApply(string.format, nil, (args))
 end
 
 function console.log(self, ...)

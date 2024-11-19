@@ -1,12 +1,1 @@
-const array1 = [1, 2, 3];
-
-console.log(array1.includes(2));
-// Expected output: true
-
-const pets = ['cat', 'dog', 'bat'];
-
-console.log(pets.includes('cat22'));
-// Expected output: true
-
-console.log(pets.includes('at'));
-// Expected output: false
+print( table.concat({ 'a', 'b' }, " ") )  -- Join them into a single string with spaces

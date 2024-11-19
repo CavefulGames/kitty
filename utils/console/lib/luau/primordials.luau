@@ -2,7 +2,10 @@ local function reflectConstruct(func, args)
     func(table.unpack(args))
 end
 
-local function reflectApply(target, self, args)
+local function reflectApply(target, self, args, ...)
+    if typeof(args) ~= 'table' then
+        args = { args, ... }
+    end
     return target(self, table.unpack(args))
 end
 
