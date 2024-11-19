@@ -7,3 +7,4 @@ self 구조 바꿔야함 (노가다)
 file 구조 바꿔야함 (노가다)
 
 initializeGlobalConsole 만들기
+stream 내부구조 만들기 (이거 + print 까지하면 끝일듯)

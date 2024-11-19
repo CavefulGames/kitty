@@ -15,6 +15,7 @@ export type Console = typeof(setmetatable({} :: {
         writable: any,
         configurable: any,
         value: any,
+        listener: any,
     },
     _stderr: { 
         kBindStreamsEager: any,
@@ -277,6 +278,7 @@ function console.kBindProperties(self, ignoreErrors, colorMode, groupIndentation
         enumerable = consolePropAttributes.enumerable,
         writable = consolePropAttributes.writable,
         value = createWriteErrorHandler(self :: any , kUseStdout),
+        listener = nil,
     }
 
     self._stderrErrorHandler = {
@@ -608,6 +610,5 @@ consoleMethods.info = console.log
 consoleMethods.dirxml = console.log
 consoleMethods.error = console.warn
 consoleMethods.groupCollapsed = console.group
-
 
 return consoleMethods
