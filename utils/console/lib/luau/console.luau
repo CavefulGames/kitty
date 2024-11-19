@@ -102,6 +102,15 @@ type ConsoleImpl = {
 
     trace: (self: Console, ...any) -> (),
     assert: (self: Console, expression: any, ...any) -> (),
+
+    --// todo (make a clear)
+    clear: (self: Console) -> (),
+
+    count: (self: Console, label: string?) -> (),
+    countReset: (self: Console, table: string?) -> (),
+    group: (self: Console, ...any) -> (),
+    groupEnd: (self: Console) -> (),
+    table: (self: Console, tabularData: any, properties: any) -> (any),
 }
 
 local ERR_CONSOLE_WRITABLE_STREAM = errorCodes.ERR_CONSOLE_WRITABLE_STREAM
@@ -434,6 +443,120 @@ function console.assert(self, expression, ...)
         end
 
         primordials.reflectApply(self.warn, self, args)
+    end
+end
+
+function console.count(self, label)
+    label = label or 'default'
+    local counts = self.kCounts
+    local count = counts.value:get(label)
+    if count == nil then
+        count = 1
+    else
+        count += 1
+    end
+    counts.value:set(label, count)
+    debug.traceback(`count::{label}: {count}`)
+    self:log(`{label}: {count}`)
+end
+
+function console.countReset(self, label)
+    label = label or 'default'
+
+    local counts = self.kCounts
+    if not counts.value:has(label) then
+        warn(`Count for '{label}' does not exist`)
+        return
+    end
+    debug.traceback(`count::{label}`, 0)
+    counts.value:delete(label)
+end
+
+function console.group(self, ...)
+    local data = { ... }
+
+    if #data > 0 then
+        primordials.reflectApply(self.log, self, data)
+    end
+
+    local currentIndentation = internalIndentationMap:get(self) or ''
+    currentIndentation ..= primordials.stringPrototypeRepeat(' ', self.kGroupIndentationWidth.value)
+
+    internalIndentationMap:set(self, currentIndentation)
+end
+
+function console.groupEnd(self)
+    local currentIndentation = internalIndentationMap:get(self) or ''
+    local newIndentation = primordials.stringPrototypeSlice(
+        currentIndentation,
+        0,
+        #currentIndentation - self.kGroupIndentationWidth.value
+    )
+
+    internalIndentationMap:set(self, newIndentation)
+end
+
+function console.table(self, tabularData, properties)
+    if properties ~= nil then
+        if type(properties) ~= "table" then
+            error(`properties must be an array (table).`)
+        end
+    end
+
+    if tabularData == nil or typeof(tabularData) ~= 'table' then
+        return self:log(tabularData)
+    end
+
+    local cliTable = require(script.Parent:WaitForChild('cli_table'))
+    
+    local function final(k, v)
+        self:log(cliTable(k, v))
+    end
+
+    local function _inspect(v)
+        local depth = if v ~= nil and
+            typeof(v) == 'table' and 
+            not primordials.isArray(v) and 
+            #primordials.objectKeys(v) > 2 then
+                -1 else 0
+        local opt = {
+            depth=depth,
+            maxArrayLength = 3,
+            breakLength = math.huge,
+        }
+        for k, v in self:kGetInspectOptions(self._stdout) do
+            opt[k] = v
+        end
+        return inspect(v, opt)
+    end
+
+    local function getIndexArray(length)
+        local result = {}
+        for i=1, length do
+            result[i] = _inspect(i)
+        end
+        return result
+    end
+
+    local mapIter = tabularData
+    local isKeyValue = false
+    local i = 1
+
+    
+    local map = {}
+    local hasPrimitives = false
+    local valuesKeyArray = {}
+    local indexKeyArray = primordials.objectKeys(tabularData)
+
+    while i < #indexKeyArray + 1 do
+        local item = tabularData[indexKeyArray[i]]
+        local primitive = item == nil or (typeof(item) ~= 'function' and not primordials.isObject(item))
+
+        
+        
+
+
+        i += 1
     end
 end
 

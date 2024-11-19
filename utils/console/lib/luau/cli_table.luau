@@ -1,4 +1,5 @@
 --!strict
+local primordials = require(script.Parent:WaitForChild('primordials'))
 
 local tableChars = {
     middleMiddle = '─',
@@ -16,62 +17,11 @@ local tableChars = {
     middle = ' │ ',
 };
 
-local function stringPrototypeRepeat(str: string, num: number)
-    local result = ''
-    for i=1, num do
-        result ..= str
-    end
-    return result
-end
-
-local function arrayPrototypeMap<T>(array: { [number]: T }, call: (v: T, i: number) -> (any))
-    local result = {}
-    for i, v in array do
-        result[i] = call(v, i)
-    end
-    return result
-end
-
-local function mathMaxApply(array: { [number]: number }): number
-    local result: number
-    for _, v in array do
-        if not result then
-            result = v
-            continue
-        end
-
-        if result < v then
-            result = v 
-        end
-    end
-    return result
-end
-
-local function mathMax(...: number)
-    local result: number
-    for _, v in { ... } do
-        if not result then
-            result = v 
-            continue
-        end
-
-        if result < v then
-            result = v
-        end
-    end
-    return result
-end
-
-local function arrayPrototypeJoin(array: { [number]: string }, str: string?)
-    local result = ''
-    str = str::string or ',' :: string
-
-    for i=1, #array do
-        result ..= `{array[i]}{str}`
-    end
-
-    return result
-end
+local arrayPrototypeJoin = primordials.arrayPrototypeJoin
+local arrayPrototypeMap = primordials.arrayPrototypeMap
+local stringPrototypeRepeat = primordials.stringPrototypeRepeat
+local mathMaxApply = primordials.mathMaxApply
+local mathMax = primordials.mathMax
 
 local function renderRow(row: { [number]: string }, columnWidths: { [number]: number }): string
     local out = tableChars.left
