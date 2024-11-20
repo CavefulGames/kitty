@@ -6,6 +6,8 @@ TODO: validateOneOf 만들기
 console.table 고치기, 
 console.tree 만들기
 
+primordials formatWithOptions remake,
+console.table 정상화 시키기
 
 
 

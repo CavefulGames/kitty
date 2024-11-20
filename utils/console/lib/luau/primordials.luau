@@ -1,3 +1,6 @@
+--!strict
+local typeError = require(script.Parent:WaitForChild('typeError'))
+
 local function reflectConstruct(func, args)
     func(table.unpack(args))
 end
@@ -152,11 +155,162 @@ local function isObject(arr)
     return true
 end
 
-local function formatWithOptions(str, arr)
-    for k, v in arr do
-        (str::string):format(v)
+local function getOwnPropertyDescriptor(obj: any, key: string)
+    if not isObject(obj) then
+        error(typeError.new("Object must be an object"))
     end
-    return str
+
+    local mt = getmetatable(obj)
+    if mt and type(mt.__propertyDescriptors) == "table" then
+        return mt.__propertyDescriptors[key]
+    end
+
+    if rawget(obj, key) ~= nil then
+        return {
+            value = rawget(obj, key),
+            writable = true,
+            enumerable = true,
+            configurable = true
+        }
+    end
+
+    return nil
+end
+
+--[=[
+-- local function formatWithOptions(str, arr)
+--     print(str, arr)
+--     for k, v in arr do
+--         -- if typeof(v) == 'table' then
+--         --     formatWithOptions(str, v)
+--         -- end 
+--         (str::string):format(v)
+--     end
+--     return str
+-- end
+--]=]
+
+local function escapeString(str)
+    return string.gsub(str, '["\\\n\r\t]', {
+        ['"'] = '\\"',
+        ['\\'] = '\\\\',
+        ['\n'] = '\\n',
+        ['\r'] = '\\r',
+        ['\t'] = '\\t'
+    })
+end
+
+local function formatWithOptions(options, value, recurseTimes)
+    options = options or {}
+    recurseTimes = recurseTimes or 0
+    
+    options.depth = options.depth or 2
+    options.colors = options.colors or false
+    options.maxArrayLength = options.maxArrayLength or 100
+    options.breakLength = options.breakLength or 80
+    options.compact = options.compact or 3
+    options.sorted = options.sorted or false
+    
+    if recurseTimes > options.depth then
+        return '"[Maximum depth reached]"'
+    end
+    
+    if typeof(value) == "nil" then
+        return "nil"
+    end
+    
+    if typeof(value) == "number" then
+        if value ~= value then
+            return "NaN"
+        elseif value == math.huge then
+            return "Infinity"
+        elseif value == -math.huge then
+            return "-Infinity"
+        end
+        return tostring(value)
+    end
+    
+    if typeof(value) == "string" then
+        return '"' .. escapeString(value) .. '"'
+    end
+    
+    if typeof(value) == "boolean" then
+        return tostring(value)
+    end
+    
+    if typeof(value) == "function" then
+        return "[Function]"
+    end
+    
+    if typeof(value) == "table" then
+        local result = {}
+        
+        if isArray(value) then
+            if #value == 0 then
+                return "[]"
+            end
+            
+            table.insert(result, "[")
+            local elements = {}
+            
+            local length = math.min(#value, options.maxArrayLength)
+            
+            for i = 1, length do
+                table.insert(elements, 
+                    formatWithOptions(options, value[i], recurseTimes + 1))
+            end
+            
+            if #value > options.maxArrayLength then
+                table.insert(elements, "... " .. (#value - options.maxArrayLength) .. " more items")
+            end
+
+            if options.compact <= recurseTimes then
+                table.insert(result, "\n  " .. table.concat(elements, ",\n  ") .. "\n")
+            else
+                table.insert(result, " " .. table.concat(elements, ", ") .. " ")
+            end
+            
+            table.insert(result, "]")
+            
+        else
+            if next(value) == nil then
+                return "{}"
+            end
+            
+            table.insert(result, "{")
+            local elements = {}
+            
+            local keys = {}
+            for k in pairs(value) do
+                table.insert(keys, k)
+            end
+            
+            if options.sorted then
+                table.sort(keys)
+            end
+            
+            for _, k in ipairs(keys) do
+                local formattedKey = type(k) == "string" and 
+                    k:match("^[%a_][%w_]*$") and k or 
+                    formatWithOptions(options, k :: any, recurseTimes + 1)
+                
+                local formattedValue = formatWithOptions(options, value[k], recurseTimes + 1)
+                table.insert(elements, formattedKey .. ": " .. formattedValue)
+            end
+            
+            if options.compact <= recurseTimes then
+                table.insert(result, "\n  " .. table.concat(elements, ",\n  ") .. "\n")
+            else
+                table.insert(result, " " .. table.concat(elements, ", ") .. " ")
+            end
+            
+            table.insert(result, "}")
+        end
+        
+        return table.concat(result)
+    end
+    
+    return tostring(value)
 end
 
 local function isExtensible(value: any): boolean
@@ -184,6 +338,8 @@ return {
     stringPrototypeSlice=stringPrototypeSlice,
     mathMaxApply=mathMaxApply,
     mathMax=mathMax,
+    escapeString=escapeString,
+    getOwnPropertyDescriptor=getOwnPropertyDescriptor,
     objectKeys=objectKeys,
     objectValues=objectValues,
     objectAssign=objectAssign,

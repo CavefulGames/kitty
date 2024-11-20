@@ -10,7 +10,6 @@ local message = safeMap.new()
 local primordials = require(script.Parent:WaitForChild('primordials'))
 local typeError = require(script.Parent:WaitForChild('typeError'))
 local Error = require(script.Parent:WaitForChild('error'))
-local getOwnPropertyDescriptor = require(script.Parent:WaitForChild('getOwnPropertyDescriptor'))
 local reflectApply = primordials.reflectApply
 local arrayPrototypeUnshift = primordials.arrayPrototypeUnshift
 
@@ -46,7 +45,7 @@ local function lazyInternalUtilInspect()
 end
 
 local function isErrorStackTraceLimitWritable()
-    local desc = getOwnPropertyDescriptor.getOwnPropertyDescriptor(Error, 'stackTraceLimit')
+    local desc = primordials.getOwnPropertyDescriptor(Error, 'stackTraceLimit')
     if not desc then
         return primordials.isExtensible(Error)
     end
