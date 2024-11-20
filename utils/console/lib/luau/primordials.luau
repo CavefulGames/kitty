@@ -127,6 +127,9 @@ local function stringPrototypeSlice(str: string, start: number?, end_: number?):
 end
 
 local function isArray(arr)
+    if typeof(arr) ~= 'table' then
+        return false
+    end
     for k, _ in arr do
         if typeof(k) ~= 'number' then
             return false
@@ -137,6 +140,9 @@ local function isArray(arr)
 end
 
 local function isObject(arr)
+    if typeof(arr) ~= 'table' then
+        return false
+    end
     for k, _ in arr do
         if typeof(k) == 'number' then
             return false
@@ -152,6 +158,20 @@ local function formatWithOptions(str, arr)
     end
     return str
 end
+
+local function isExtensible(value: any): boolean
+    if type(value) ~= "table" then
+        return false
+    end
+    
+    local mt = getmetatable(value)
+    if mt and mt.__extensible ~= nil then
+        return mt.__extensible
+    end
+    
+    return true
+end
+
 
 return {
     arrayPrototypeUnshift=arrayPrototypeUnshift,
@@ -169,4 +189,5 @@ return {
     objectAssign=objectAssign,
     isArray=isArray,
     isObject=isObject,
+    isExtensible=isExtensible,
 }

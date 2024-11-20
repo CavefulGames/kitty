@@ -4,6 +4,7 @@ local safeWeakMap = require(script.Parent:WaitForChild('safeMap'))
 local colors = require(script.Parent:WaitForChild('colors'))
 local primordials = require(script.Parent:WaitForChild('primordials'))
 local inspect = require(script.Parent:WaitForChild('inspect'))
+local cliTable = require(script.Parent:WaitForChild('cli_table'))
 
 local errorCodes = errorMain.codes
 local isStackOverflowError = errorMain.isStackOverflowError
@@ -510,6 +511,7 @@ function console.groupEnd(self)
     internalIndentationMap:set(self, newIndentation)
 end
 
+--// todo console.table 고치기
 function console.table(self, tabularData, properties)
     if properties ~= nil then
         if type(properties) ~= "table" then
@@ -521,8 +523,6 @@ function console.table(self, tabularData, properties)
         return self:log(tabularData)
     end
 
-    local cliTable = require(script.Parent:WaitForChild('cli_table'))
-    
     local function final(k, v)
         self:log(cliTable(k, v))
     end
@@ -558,11 +558,11 @@ function console.table(self, tabularData, properties)
     local hasPrimitives = false
     local valuesKeyArray = {}
     local indexKeyArray = primordials.objectKeys(tabularData)
-
+    
     while i < #indexKeyArray + 1 do
         local item = tabularData[indexKeyArray[i]]
         local primitive = item == nil or 
-            (typeof(item) ~= 'function' and not primordials.isObject(item))
+            (typeof(item) ~= 'function' and primordials.isObject(item))
         if properties == nil and primitive then
             hasPrimitives = true
             valuesKeyArray[i] = _inspect(item)
@@ -577,17 +577,18 @@ function console.table(self, tabularData, properties)
                 end
             end
         end
-
+        
         i += 1
     end
 
     local keys = primordials.objectKeys(map)
     local values = primordials.objectValues(map)
-
+    
     if hasPrimitives then
         table.insert(keys, valuesKey)
         table.insert(keys, valuesKeyArray)
     end
+    
     keys = primordials.arrayPrototypeUnshift(keys, indexKey)
     values = primordials.arrayPrototypeUnshift(values, indexKeyArray)
 

@@ -15,7 +15,7 @@ local tableChars = {
     left = '│ ',
     right = ' │',
     middle = ' │ ',
-};
+}
 
 local arrayPrototypeJoin = primordials.arrayPrototypeJoin
 local arrayPrototypeMap = primordials.arrayPrototypeMap
@@ -65,6 +65,7 @@ local function tableFunction(head: { [number]: string }, columns: { [number]: an
             local width = columnWidths[i] or 0
             local counted = #value
             columnWidths[i] = mathMax(width, counted)
+            --[=[
                 -- local s, ss = column:find(tostring(j))
                 -- rows[j] = {}
                 -- rows[j][i] = if s then column:sub(s, ss) else ''
@@ -73,6 +74,7 @@ local function tableFunction(head: { [number]: string }, columns: { [number]: an
                 -- local width: number = columnWidths[i] or 0
                 -- local counted: number = #value
                 -- columnWidths[i] = mathMax(width, counted)
+            --]=]
         end
     end
 

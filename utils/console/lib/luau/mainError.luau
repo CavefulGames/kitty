@@ -10,7 +10,6 @@ local message = safeMap.new()
 local primordials = require(script.Parent:WaitForChild('primordials'))
 local typeError = require(script.Parent:WaitForChild('typeError'))
 local Error = require(script.Parent:WaitForChild('error'))
-local objectIsExtensible = require(script.Parent:WaitForChild('objectIsExtensible'))
 local getOwnPropertyDescriptor = require(script.Parent:WaitForChild('getOwnPropertyDescriptor'))
 local reflectApply = primordials.reflectApply
 local arrayPrototypeUnshift = primordials.arrayPrototypeUnshift
@@ -49,7 +48,7 @@ end
 local function isErrorStackTraceLimitWritable()
     local desc = getOwnPropertyDescriptor.getOwnPropertyDescriptor(Error, 'stackTraceLimit')
     if not desc then
-        return objectIsExtensible.isExtensible(Error)
+        return primordials.isExtensible(Error)
     end
 
     return if desc.writable ~= nil then desc.writable else desc.set ~= nil
@@ -208,13 +207,10 @@ local function makeErrorWithCode(base, key)
                 end 
             ]=]
             
-            -- Create new error instance
             local instance
             if expectedLength == 0 then
-                -- Simple error with just the message
                 instance = base.new(msg)
             else
-                -- Format message with arguments
                 local formattedMsg
                 if typeof(msg) == 'function' then
                     formattedMsg = msg(table.unpack(args))
@@ -225,7 +221,6 @@ local function makeErrorWithCode(base, key)
                 instance = base.new(formattedMsg)
             end
             
-            -- Set error properties
             instance.code = key
             
             return setmetatable(instance, nodeError)
@@ -240,7 +235,6 @@ local function makeErrorWithCode(base, key)
         end
     }
     
-    -- Make the constructor callable
     return setmetatable({}, {
         __call = function(_, ...)
             return (nodeError :: any).new(...)
