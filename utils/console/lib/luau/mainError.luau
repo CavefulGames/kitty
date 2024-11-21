@@ -38,8 +38,8 @@ end
 local function lazyInternalUtilInspect()
     return {
         format = function(...)
-            local args = {...}  -- Collect the arguments passed to the format function
-            return table.concat(args, " ")  -- Join them into a single string with spaces
+            local args = {...}
+            return table.concat(args, " ") 
         end
     }
 end
