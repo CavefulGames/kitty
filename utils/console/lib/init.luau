@@ -4,4 +4,4 @@ function consoleMethods.log(streamSymbol, string)
         
         
 
-end 
+end

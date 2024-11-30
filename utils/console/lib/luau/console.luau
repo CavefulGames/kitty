@@ -4,7 +4,6 @@ local safeWeakMap = require(script.Parent:WaitForChild('safeMap'))
 local colors = require(script.Parent:WaitForChild('colors'))
 local primordials = require(script.Parent:WaitForChild('primordials'))
 local inspect = require(script.Parent:WaitForChild('inspect'))
-local cliTable = require(script.Parent:WaitForChild('cli_table'))
 
 local errorCodes = errorMain.codes
 local isStackOverflowError = errorMain.isStackOverflowError
@@ -511,73 +510,75 @@ function console.groupEnd(self)
     internalIndentationMap:set(self, newIndentation)
 end
 
-function console.table(self, tabularData, properties)
-    if tabularData == nil or not primordials.isObject(tabularData) then
-        self:log(tabularData)
+function console.table(self, value, options)
+    if type(value) ~= "table" or #value == 0 then
+        return tostring(value)
     end
-
-    local function _inspect(v)
-        local depth = if v ~= nil and 
-            primordials.isObject(v) and 
-                #primordials.objectKeys(v) > 2 then
-                    -1 else 0
-        local opt = {
-            depth=depth,
-            maxArrayLength = 3,
-            breakLength = math.huge,
-        }
-        for k, v in self:kGetInspectOptions(self._stdout) do
-            opt[k] = v
+    
+    local headers = {"(index)"}
+    local rows = {}
+    local widths = {7}
+    
+    if type(value[1]) == "table" then
+        for k in value[1] do
+            table.insert(headers, k)
+            widths[#widths + 1] = #k
         end
-
-        return inspect(v, opt)
     end
-
-    local map = {}
-    local hasPrimitives = false
-    local valuesKeyArray = {}
-    local indexKeyArray = primordials.objectKeys(tabularData)
-
-    local i = 0
-
-    while true do
-        if i < #indexKeyArray then
-            break
+    
+    for i, item in ipairs(value) do
+        local row = {i - 1}
+        for j = 2, #headers do
+            local val = tostring(item[headers[j]] or "")
+            row[j] = val :: any
+            widths[j] = math.max(widths[j], #val)
         end
-
-        local item = tabularData[indexKeyArray[i+1]]
-        local primitive = item == nil or 
-            (typeof(item) ~= 'function' and not primordials.isObject(item))
-        if properties == nil and primitive then
-            hasPrimitives = true
-            valuesKeyArray[i] = _inspect(item)
-        else
-            local keys = properties or primordials.objectKeys(item)
-            for _, key in keys do
-                map[key] = map[key] or {}
-                if (primitive and properties) or item[key] == nil then
-                    map[key][i] = ''
-                else
-                    map[key][i] = _inspect(item[key])
-                end 
+        table.insert(rows, row)
+    end
+    
+    local result = ""
+    
+    result = result .. "┌"
+    for i, width in ipairs(widths) do
+        result = result .. string.rep("─", width + 2)
+        result = result .. (i == #widths and "┐" or "┬")
+    end
+    result = result .. "\n"
+    
+    result = result .. "│"
+    for i, header in ipairs(headers) do
+        local padding = widths[i] - #header
+        result = result .. " " .. header .. string.rep(" ", padding) .. " │"
+    end
+    result = result .. "\n"
+    
+    result = result .. "├"
+    for i, width in ipairs(widths) do
+        result = result .. string.rep("─", width + 2)
+        result = result .. (i == #widths and "┤" or "┼")
+    end
+    result = result .. "\n"
+    
+    for _, row in ipairs(rows) do
+        result = result .. "│"
+        for i, cell in ipairs(row) do
+            local padding = widths[i] - #tostring(cell)
+            if i == 1 then
+                result = result .. " " .. string.rep(" ", padding) .. cell .. " │"
+            else
+                result = result .. " " .. cell .. string.rep(" ", padding) .. " │"
             end
         end
-
-        i += 1
+        result = result .. "\n"
     end
-
-    local keys = primordials.objectKeys(map)
-    local values = primordials.objectKeys(map)
-
-    if hasPrimitives then
-        table.insert(keys, valuesKey)
-        table.insert(values, valuesKeyArray :: any)
-    end
-
-    keys = primordials.arrayPrototypeUnshift(keys, indexKey)
-    values = primordials.arrayPrototypeUnshift(values, indexKeyArray)
     
-    return self:log(cliTable(keys, values))
+    result = result .. "└"
+    for i, width in ipairs(widths) do
+        result = result .. string.rep("─", width + 2)
+        result = result .. (i == #widths and "┘" or "┴")
+    end
+
+    return print(`\n{result}`)
 end
 
 console.debug = console.log
