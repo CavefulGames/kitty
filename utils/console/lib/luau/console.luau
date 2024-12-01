@@ -9,6 +9,10 @@ local errorCodes = errorMain.codes
 local isStackOverflowError = errorMain.isStackOverflowError
 
 export type Console = typeof(setmetatable({} :: {
+    --// user configs
+    round: boolean,
+
+    --// system
     _stdout: { 
         kBindStreamsEager: any,
         enumerable: any,
@@ -112,6 +116,7 @@ type ConsoleImpl = {
     group: (self: Console, ...any) -> (),
     groupEnd: (self: Console) -> (),
     table: (self: Console, tabularData: any, properties: any) -> (any),
+    tree: (self: Console, top: Instance | string, child: { [any]: any }?) -> (),
 
     --// pulsing
     debug: (self: Console, ...any) -> (),
@@ -138,10 +143,6 @@ local SymbolToStringTag = 'SymbolToStringTag'
 local kFormatForStdout = 'kFormatForStdout'
 
 local kMaxGroupIndentation = 1000
-local keyKey = 'Key'
-local valuesKey = 'Values'
-local indexKey = '(index)'
-local iterKey = '(iteration index)'
 
 local optionsMap = safeWeakMap.new()
 local internalIndentationMap = safeWeakMap.new()
@@ -156,6 +157,22 @@ local consolePropAttributes = {
     configurable = true,
 }
 
+local tableChars = {
+    middleMiddle = '─',
+    rowMiddle = '┼',
+    topRight = '┐',
+    topLeft = '┌',
+    leftMiddle = '├',
+    topMiddle = '┬',
+    bottomRight = '┘',
+    bottomLeft = '└',
+    bottomMiddle = '┴',
+    rightMiddle = '┤',
+    left = '│ ',
+    right = ' │',
+    middle = '│'
+}
+
 local function noop() end
 
 local function createWriteErrorHandler(instance, streamSymbol)
@@ -167,6 +184,42 @@ local function createWriteErrorHandler(instance, streamSymbol)
                 (stream.value :: any ).once('error', noop)
             end
         end
+    end
+end
+
+local function changeTableChars(round: boolean)
+    if not round then
+        tableChars = {
+            middleMiddle = '─',
+            rowMiddle = '┼',
+            topRight = '┐',
+            topLeft = '┌',
+            leftMiddle = '├',
+            topMiddle = '┬',
+            bottomRight = '┘',
+            bottomLeft = '└',
+            bottomMiddle = '┴',
+            rightMiddle = '┤',
+            left = '│ ',
+            right = ' │',
+            middle = '│'
+        }
+    else
+        tableChars = {
+            middleMiddle = '─',
+            rowMiddle = '┼',
+            topRight = '╮',
+            topLeft = '╭',
+            leftMiddle = '├',
+            topMiddle = '┬',
+            bottomRight = '╯',
+            bottomLeft = '╰',
+            bottomMiddle = '┴',
+            rightMiddle = '┤',
+            left = '│ ',
+            right = ' │',
+            middle = '│'
+        }
     end
 end
 
@@ -515,6 +568,8 @@ function console.table(self, value, options)
         return tostring(value)
     end
     
+    changeTableChars(self.round)
+    
     local headers = {"(index)"}
     local rows = {}
     local widths = {7}
@@ -538,45 +593,70 @@ function console.table(self, value, options)
     
     local result = ""
     
-    result = result .. "┌"
+    result = result .. tableChars.topLeft
     for i, width in ipairs(widths) do
-        result = result .. string.rep("─", width + 2)
-        result = result .. (i == #widths and "┐" or "┬")
+        result = result .. string.rep(tableChars.middleMiddle, width + 2)
+        result = result .. (i == #widths and tableChars.topRight or tableChars.topMiddle)
     end
     result = result .. "\n"
     
-    result = result .. "│"
+    result = result .. tableChars.middle
     for i, header in ipairs(headers) do
         local padding = widths[i] - #header
-        result = result .. " " .. header .. string.rep(" ", padding) .. " │"
+        result = result .. " " .. header .. string.rep(" ", padding) .. tableChars.right
     end
     result = result .. "\n"
     
-    result = result .. "├"
+    result = result .. tableChars.leftMiddle
     for i, width in ipairs(widths) do
-        result = result .. string.rep("─", width + 2)
-        result = result .. (i == #widths and "┤" or "┼")
+        result = result .. string.rep(tableChars.middleMiddle, width + 2)
+        result = result .. (i == #widths and tableChars.rightMiddle or tableChars.rowMiddle)
     end
     result = result .. "\n"
     
     for _, row in ipairs(rows) do
-        result = result .. "│"
+        result = result .. tableChars.middle
         for i, cell in ipairs(row) do
             local padding = widths[i] - #tostring(cell)
             if i == 1 then
-                result = result .. " " .. string.rep(" ", padding) .. cell .. " │"
+                result = result .. " " .. string.rep(" ", padding) .. cell .. tableChars.right
             else
-                result = result .. " " .. cell .. string.rep(" ", padding) .. " │"
+                result = result .. " " .. cell .. string.rep(" ", padding) .. tableChars.right
             end
         end
         result = result .. "\n"
     end
     
-    result = result .. "└"
+    result = result .. tableChars.bottomLeft
     for i, width in ipairs(widths) do
-        result = result .. string.rep("─", width + 2)
-        result = result .. (i == #widths and "┘" or "┴")
+        result = result .. string.rep(tableChars.middleMiddle, width + 2)
+        result = result .. (i == #widths and tableChars.bottomRight or tableChars.bottomMiddle)
     end
+
+    return print(`\n{result}`)
+end
+
+-- middleMiddle = '─',
+-- rowMiddle = '┼',
+-- topRight = '┐',
+-- topLeft = '┌',
+-- leftMiddle = '├',
+-- topMiddle = '┬',
+-- bottomRight = '┘',
+-- bottomLeft = '└',
+-- bottomMiddle = '┴',
+-- rightMiddle = '┤',
+-- left = '│ ',
+-- right = ' │',
+-- middle = '│'
+
+function console.tree(self, top, child)
+    if typeof(top) =='Instance' then
+        
+    end
+
+    local result = top :: string
+    local childLen = primordials.getObjectOrArrayLen(child) :: number
 
     return print(`\n{result}`)
 end

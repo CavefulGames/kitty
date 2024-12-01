@@ -190,6 +190,14 @@ end
 -- end
 --]=]
 
+local function getObjectOrArrayLen(arrOrObj)
+    local result = 0
+    for k, v in arrOrObj do
+        result += 1
+    end
+    return result
+end
+
 local function escapeString(str)
     return string.gsub(str, '["\\\n\r\t]', {
         ['"'] = '\\"',
@@ -340,6 +348,7 @@ return {
     mathMax=mathMax,
     escapeString=escapeString,
     getOwnPropertyDescriptor=getOwnPropertyDescriptor,
+    getObjectOrArrayLen=getObjectOrArrayLen,
     objectKeys=objectKeys,
     objectValues=objectValues,
     objectAssign=objectAssign,
