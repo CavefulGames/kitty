@@ -10,7 +10,7 @@ local isStackOverflowError = errorMain.isStackOverflowError
 
 export type Console = typeof(setmetatable({} :: {
     --// user configs
-    round: boolean,
+    round: 'always' | 'only_tree' | 'off', 
 
     --// system
     _stdout: { 
@@ -173,6 +173,22 @@ local tableChars = {
     middle = '│'
 }
 
+local treeChars = {
+    middleMiddle = '─',
+    rowMiddle = '┼',
+    topRight = '┐',
+    topLeft = '┌',
+    leftMiddle = '├',
+    topMiddle = '┬',
+    bottomRight = '┘',
+    bottomLeft = '└',
+    bottomMiddle = '┴',
+    rightMiddle = '┤',
+    left = '│ ',
+    right = ' │',
+    middle = '│'
+}
+
 local function noop() end
 
 local function createWriteErrorHandler(instance, streamSymbol)
@@ -187,8 +203,39 @@ local function createWriteErrorHandler(instance, streamSymbol)
     end
 end
 
-local function changeTableChars(round: boolean)
-    if not round then
+local function changeTableChars(round: 'always' | 'only_tree' | 'off')
+    if round == 'always' then
+        tableChars = {
+            middleMiddle = '─',
+            rowMiddle = '┼',
+            topRight = '╮',
+            topLeft = '╭',
+            leftMiddle = '├',
+            topMiddle = '┬',
+            bottomRight = '╯',
+            bottomLeft = '╰',
+            bottomMiddle = '┴',
+            rightMiddle = '┤',
+            left = '│ ',
+            right = ' │',
+            middle = '│'
+        }
+        treeChars = {
+            middleMiddle = '─',
+            rowMiddle = '┼',
+            topRight = '╮',
+            topLeft = '╭',
+            leftMiddle = '├',
+            topMiddle = '┬',
+            bottomRight = '╯',
+            bottomLeft = '╰',
+            bottomMiddle = '┴',
+            rightMiddle = '┤',
+            left = '│ ',
+            right = ' │',
+            middle = '│'
+        }
+    elseif round == 'only_tree' then
         tableChars = {
             middleMiddle = '─',
             rowMiddle = '┼',
@@ -204,8 +251,7 @@ local function changeTableChars(round: boolean)
             right = ' │',
             middle = '│'
         }
-    else
-        tableChars = {
+        treeChars = {
             middleMiddle = '─',
             rowMiddle = '┼',
             topRight = '╮',
@@ -214,6 +260,38 @@ local function changeTableChars(round: boolean)
             topMiddle = '┬',
             bottomRight = '╯',
             bottomLeft = '╰',
+            bottomMiddle = '┴',
+            rightMiddle = '┤',
+            left = '│ ',
+            right = ' │',
+            middle = '│'
+        }
+    else
+        tableChars = {
+            middleMiddle = '─',
+            rowMiddle = '┼',
+            topRight = '┐',
+            topLeft = '┌',
+            leftMiddle = '├',
+            topMiddle = '┬',
+            bottomRight = '┘',
+            bottomLeft = '└',
+            bottomMiddle = '┴',
+            rightMiddle = '┤',
+            left = '│ ',
+            right = ' │',
+            middle = '│'
+        }
+        
+        treeChars = {
+            middleMiddle = '─',
+            rowMiddle = '┼',
+            topRight = '┐',
+            topLeft = '┌',
+            leftMiddle = '├',
+            topMiddle = '┬',
+            bottomRight = '┘',
+            bottomLeft = '└',
             bottomMiddle = '┴',
             rightMiddle = '┤',
             left = '│ ',
@@ -657,6 +735,33 @@ function console.tree(self, top, child)
 
     local result = top :: string
     local childLen = primordials.getObjectOrArrayLen(child) :: number
+    local childLoopCount = 1
+
+    local function setChildResult(key, argument, voidSize)
+        result ..= '\n'
+    
+        if voidSize == 1 then
+            if childLen == childLoopCount then
+                result ..= tableChars.bottomLeft
+            else
+                result ..= tableChars.leftMiddle
+            end
+
+            childLoopCount += 1
+        else
+            result ..= tableChars.leftMiddle
+        end
+
+        result ..= tableChars.middleMiddle
+    end
+
+    local function childRunArguments()
+        for key, argument in child :: any do
+            setChildResult(key, argument, 1)
+        end
+    end
+
+    childRunArguments()
 
     return print(`\n{result}`)
 end
