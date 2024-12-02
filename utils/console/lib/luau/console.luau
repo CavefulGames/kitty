@@ -10,7 +10,7 @@ local isStackOverflowError = errorMain.isStackOverflowError
 
 export type Console = typeof(setmetatable({} :: {
     --// user configs
-    round: 'always' | 'only_tree' | 'off', 
+    round: 'always' | 'only_tree' | 'only_table' | 'off' | boolean, 
 
     --// system
     _stdout: { 
@@ -203,7 +203,7 @@ local function createWriteErrorHandler(instance, streamSymbol)
     end
 end
 
-local function changeTableChars(round: 'always' | 'only_tree' | 'off')
+local function changeTableChars(round: 'always' | 'only_tree' | 'only_table' | 'off' | boolean)
     if round == 'always' then
         tableChars = {
             middleMiddle = '─',
@@ -266,7 +266,38 @@ local function changeTableChars(round: 'always' | 'only_tree' | 'off')
             right = ' │',
             middle = '│'
         }
-    else
+    elseif round == 'only_table' then
+        tableChars = {
+            middleMiddle = '─',
+            rowMiddle = '┼',
+            topRight = '╮',
+            topLeft = '╭',
+            leftMiddle = '├',
+            topMiddle = '┬',
+            bottomRight = '╯',
+            bottomLeft = '╰',
+            bottomMiddle = '┴',
+            rightMiddle = '┤',
+            left = '│ ',
+            right = ' │',
+            middle = '│'
+        }
+        treeChars = {
+            middleMiddle = '─',
+            rowMiddle = '┼',
+            topRight = '┐',
+            topLeft = '┌',
+            leftMiddle = '├',
+            topMiddle = '┬',
+            bottomRight = '┘',
+            bottomLeft = '└',
+            bottomMiddle = '┴',
+            rightMiddle = '┤',
+            left = '│ ',
+            right = ' │',
+            middle = '│'
+        }
+    elseif round == 'off' then
         tableChars = {
             middleMiddle = '─',
             rowMiddle = '┼',
@@ -298,6 +329,10 @@ local function changeTableChars(round: 'always' | 'only_tree' | 'off')
             right = ' │',
             middle = '│'
         }
+    elseif round then
+        changeTableChars('always')
+    else
+        changeTableChars('off')
     end
 end
 
@@ -714,54 +749,56 @@ function console.table(self, value, options)
     return print(`\n{result}`)
 end
 
--- middleMiddle = '─',
--- rowMiddle = '┼',
--- topRight = '┐',
--- topLeft = '┌',
--- leftMiddle = '├',
--- topMiddle = '┬',
--- bottomRight = '┘',
--- bottomLeft = '└',
--- bottomMiddle = '┴',
--- rightMiddle = '┤',
--- left = '│ ',
--- right = ' │',
--- middle = '│'
-
 function console.tree(self, top, child)
+    changeTableChars(self.round)
     if typeof(top) =='Instance' then
-        
-    end
-
-    local result = top :: string
-    local childLen = primordials.getObjectOrArrayLen(child) :: number
-    local childLoopCount = 1
-
-    local function setChildResult(key, argument, voidSize)
-        result ..= '\n'
-    
-        if voidSize == 1 then
-            if childLen == childLoopCount then
-                result ..= tableChars.bottomLeft
-            else
-                result ..= tableChars.leftMiddle
+        local topName = top.Name
+        local function changeInstanceToChild(argument)
+            local reusltChild = {} :: any
+            for k, v: Instance in argument:GetChildren() do
+                reusltChild[`{v.Name}: {v.ClassName}`] = changeInstanceToChild(v)
             end
-
-            childLoopCount += 1
-        else
-            result ..= tableChars.leftMiddle
+            return reusltChild
         end
 
-        result ..= tableChars.middleMiddle
+        child = changeInstanceToChild(top)
+        top = `{topName}: {top.ClassName}`
     end
 
-    local function childRunArguments()
-        for key, argument in child :: any do
-            setChildResult(key, argument, 1)
+    local result = top :: string .. '\n ' .. treeChars.middle
+    local voidDefultSize = ' '
+    local defultMiddleVoidSize = ' '
+    local defultHightMiddle = treeChars.middle
+    local defultWightMiddle = treeChars.middleMiddle
+    
+    local function childResult(argument: { [any]: any }, voidSize: number, firstChild: boolean)
+        local childMaxLoopCound = primordials.getObjectOrArrayLen(argument)
+        local childCount = 0 
+        for k, v in argument do
+            childCount += 1
+            local hightMiddle = treeChars.leftMiddle
+            local argumentIsTable = typeof(v) == 'table'
+            local widthMiddle = if argumentIsTable then treeChars.topMiddle else defultWightMiddle
+            if childCount == childMaxLoopCound then hightMiddle = treeChars.bottomLeft end
+            if argumentIsTable and primordials.getObjectOrArrayLen(v) == 0 then widthMiddle = defultWightMiddle end
+            result ..= `\n{defultMiddleVoidSize}{primordials.stringPrototypeRepeat(`{defultHightMiddle}{voidDefultSize}`, voidSize)}{hightMiddle}{defultWightMiddle}{widthMiddle} {k}`
+            if argumentIsTable then
+                if childCount == childMaxLoopCound then
+                    defultMiddleVoidSize = '   '
+                    childResult(v, voidSize, false)
+                else
+                    childResult(v, voidSize+1, false)
+                    if firstChild then
+                        result ..= `\n{defultMiddleVoidSize}{primordials.stringPrototypeRepeat(`{defultHightMiddle}{voidDefultSize}`, voidSize + 1)}`
+                    end
+                end
+            else
+                result ..= `: {v}`
+            end
         end
     end
-
-    childRunArguments()
+    
+    childResult(child :: any, 0, true)
 
     return print(`\n{result}`)
 end
