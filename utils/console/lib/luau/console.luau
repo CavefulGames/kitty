@@ -775,10 +775,11 @@ function console.tree(self, top, child)
     local defultHightMiddle = treeChars.middle
     local defultWightMiddle = treeChars.middleMiddle
     
-    local function childResult(argument: { [any]: any }, voidSize: number, firstChild: boolean)
+    local function childResult(argument: { [any]: any }, voidSize: number)
         local childMaxLoopCound = primordials.getObjectOrArrayLen(argument)
         local childCount = 0 
         for k, v in argument do
+            if typeof(k) ~= 'string' then k = tostring(k) end
             childCount += 1
             local hightMiddle = treeChars.leftMiddle
             local argumentIsTable = typeof(v) == 'table' and not v.TREE_INSTANCE
@@ -789,12 +790,9 @@ function console.tree(self, top, child)
             if argumentIsTable then
                 if childCount == childMaxLoopCound then
                     defultMiddleVoidSize = '   '
-                    childResult(v, voidSize, false)
+                    childResult(v, voidSize)
                 else
-                    childResult(v, voidSize+1, false)
-                    if firstChild then
-                        result ..= `\n{defultMiddleVoidSize}{primordials.stringPrototypeRepeat(`{defultHightMiddle}{voidDefultSize}`, voidSize + 1)}`
-                    end
+                    childResult(v, voidSize+1)
                 end
             else
                 if typeof(v) == 'table' then
@@ -806,7 +804,7 @@ function console.tree(self, top, child)
         end
     end
     
-    childResult(child :: any, 0, true)
+    childResult(child :: any, 0)
 
     return print(`\n{result}`)
 end
