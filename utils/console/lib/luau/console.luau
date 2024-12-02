@@ -1,4 +1,7 @@
 --!strict
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local result = require(ReplicatedStorage.packages.result)
 local errorMain = require(script.Parent:WaitForChild('mainError'))
 local safeWeakMap = require(script.Parent:WaitForChild('safeMap'))
 local colors = require(script.Parent:WaitForChild('colors'))
@@ -756,7 +759,8 @@ function console.tree(self, top, child)
         local function changeInstanceToChild(argument)
             local reusltChild = {} :: any
             for k, v: Instance in argument:GetChildren() do
-                reusltChild[`{v.Name}: {v.ClassName}`] = changeInstanceToChild(v)
+                reusltChild[v] = changeInstanceToChild(v)
+                reusltChild[v].TREE_INSTANCE = v.ClassName
             end
             return reusltChild
         end
@@ -765,7 +769,7 @@ function console.tree(self, top, child)
         top = `{topName}: {top.ClassName}`
     end
 
-    local result = top :: string .. '\n ' .. treeChars.middle
+    local result = top :: string
     local voidDefultSize = ' '
     local defultMiddleVoidSize = ' '
     local defultHightMiddle = treeChars.middle
@@ -777,7 +781,7 @@ function console.tree(self, top, child)
         for k, v in argument do
             childCount += 1
             local hightMiddle = treeChars.leftMiddle
-            local argumentIsTable = typeof(v) == 'table'
+            local argumentIsTable = typeof(v) == 'table' and not v.TREE_INSTANCE
             local widthMiddle = if argumentIsTable then treeChars.topMiddle else defultWightMiddle
             if childCount == childMaxLoopCound then hightMiddle = treeChars.bottomLeft end
             if argumentIsTable and primordials.getObjectOrArrayLen(v) == 0 then widthMiddle = defultWightMiddle end
@@ -793,7 +797,11 @@ function console.tree(self, top, child)
                     end
                 end
             else
-                result ..= `: {v}`
+                if v.TREE_INSTANCE then
+                    result ..= `: {v.TREE_INSTANCE}`
+                else
+                    result ..= `: {v}`
+                end    
             end
         end
     end
