@@ -1,7 +1,4 @@
 --!strict
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local result = require(ReplicatedStorage.packages.result)
 local errorMain = require(script.Parent:WaitForChild('mainError'))
 local safeWeakMap = require(script.Parent:WaitForChild('safeMap'))
 local colors = require(script.Parent:WaitForChild('colors'))
@@ -779,13 +776,22 @@ function console.tree(self, top, child)
         local childMaxLoopCound = primordials.getObjectOrArrayLen(argument)
         local childCount = 0 
         for k, v in argument do
-            if typeof(k) ~= 'string' then k = tostring(k) end
+            if typeof(k) ~= 'string' then 
+                k = tostring(k) 
+            end
             childCount += 1
+            
             local hightMiddle = treeChars.leftMiddle
             local argumentIsTable = typeof(v) == 'table' and not v.TREE_INSTANCE
             local widthMiddle = if argumentIsTable then treeChars.topMiddle else defultWightMiddle
-            if childCount == childMaxLoopCound then hightMiddle = treeChars.bottomLeft end
-            if argumentIsTable and primordials.getObjectOrArrayLen(v) == 0 then widthMiddle = defultWightMiddle end
+            
+            if childCount == childMaxLoopCound then 
+                hightMiddle = treeChars.bottomLeft 
+            end
+            if argumentIsTable and primordials.getObjectOrArrayLen(v) == 0 then 
+                widthMiddle = defultWightMiddle 
+            end
+            
             result ..= `\n{defultMiddleVoidSize}{primordials.stringPrototypeRepeat(`{defultHightMiddle}{voidDefultSize}`, voidSize)}{hightMiddle}{defultWightMiddle}{widthMiddle} {k}`
             if argumentIsTable then
                 if childCount == childMaxLoopCound then
