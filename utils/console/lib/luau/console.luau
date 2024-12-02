@@ -797,7 +797,7 @@ function console.tree(self, top, child)
                     end
                 end
             else
-                if v.TREE_INSTANCE then
+                if typeof(v) == 'table' then
                     result ..= `: {v.TREE_INSTANCE}`
                 else
                     result ..= `: {v}`
