@@ -536,21 +536,25 @@ function console.kWriteToConsole(self, streamSymbol, str)
 
     if ignoreErrors.value == false then return stream.value.write(str) end
 
-    local b, e = pcall(function() 
-        if stream.value.listenerCount('error') == 0 then
-            stream.value.once('error', noop)
-        end
+    stream.value.write(str, errorHandler)
 
-        stream.value.write(str, errorHandler)
-    end)
+    -- local b, e = pcall(function() 
+    --     if stream.value.listenerCount('error') == 0 then
+    --         stream.value.once('error', noop)
+    --     end
 
-    if b then
-        if isStackOverflowError(e) then
-            error(e)
-        end
-    else
-        stream.value.removeListener('error', noop)
-    end
+    --     stream.value.write(str, errorHandler)
+    -- end)
+
+    -- if b then
+    --     if isStackOverflowError(e) then
+    --         error(e)
+    --     else
+    --         error(str)
+    --     end
+    -- else
+    --     stream.value.removeListener('error', noop)
+    -- end
 end
 
 function console.kGetInspectOptions(self, stream)
