@@ -101,16 +101,12 @@ type ConsoleImpl = {
     warn: (self: Console, ...any) -> (),
     dir: (self: Console, object: any, options: any) -> (),
 
-    --// todo (make a time's)
     time: (self: Console, label: any) -> (),
     timeEnd: (self: Console, label: any) -> (),
     timeLog: (self: Console, label: any) -> (),
 
     trace: (self: Console, ...any) -> (),
     assert: (self: Console, expression: any, ...any) -> (),
-
-    --// todo (make a clear)
-    clear: (self: Console) -> (),
 
     count: (self: Console, label: string?) -> (),
     countReset: (self: Console, table: string?) -> (),
@@ -119,7 +115,6 @@ type ConsoleImpl = {
     table: (self: Console, tabularData: any, properties: any) -> (any),
     tree: (self: Console, top: Instance | string, child: { [any]: any }?) -> (),
 
-    --// pulsing
     debug: (self: Console, ...any) -> (),
     info: (self: Console, ...any) -> (),
     dirxml: (self: Console, ...any) -> (),
