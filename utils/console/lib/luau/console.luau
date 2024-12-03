@@ -803,6 +803,8 @@ function console.tree(self, top, child)
             else
                 if typeof(v) == 'table' then
                     result ..= `: {v.TREE_INSTANCE}`
+                    v.TREE_INSTANCE = nil
+                    childResult(v, voidSize+1)
                 else
                     result ..= `: {v}`
                 end    
