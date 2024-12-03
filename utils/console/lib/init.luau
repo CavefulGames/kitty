@@ -1,5 +1,6 @@
 --!strict
 local constructors = require(script:WaitForChild('constructors'))
+local type = require(script:WaitForChild('type'))
 
 local console = {}
 
@@ -63,7 +64,6 @@ function console.tree(...)
     constructors.logConstructor:tree(...)
 end
 
-
 function console.warn(...)
     constructors.warnConstructor:log(...)
 end
@@ -80,4 +80,4 @@ function console.assert(...)
     constructors.errorConstructor:assert(...)
 end
 
-return console
+return console :: type.Console

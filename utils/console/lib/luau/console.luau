@@ -538,6 +538,7 @@ function console.kWriteToConsole(self, streamSymbol, str)
 
     stream.value.write(str, errorHandler)
 
+    --[=[
     -- local b, e = pcall(function() 
     --     if stream.value.listenerCount('error') == 0 then
     --         stream.value.once('error', noop)
@@ -555,6 +556,7 @@ function console.kWriteToConsole(self, streamSymbol, str)
     -- else
     --     stream.value.removeListener('error', noop)
     -- end
+    -]=]
 end
 
 function console.kGetInspectOptions(self, stream)
