@@ -601,8 +601,10 @@ function console.dir(self, object, options)
             result[k] = v
         end
 
-        for k, v in options do
-            result[k] = v
+        if options then
+            for k, v in options do
+                result[k] = v
+            end
         end
         
         return result
