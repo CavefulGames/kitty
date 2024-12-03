@@ -1,6 +1,5 @@
 --!strict
 local console = require(script.Parent:WaitForChild('luau'):WaitForChild('console'))
-local constructor = require(script:WaitForChild('luau'):WaitForChild('console'))
 
 local listenerCount = {}
 local baseOptions = { 
@@ -31,7 +30,7 @@ errorOptions.write = function(str)
 end
 
 return {
-    logConstructor = constructor.new(logOptions),
-    warnConstructor = constructor.new(warnOptions),
-    errorConstructor = constructor.new(errorOptions),
+    logConstructor = console.new(logOptions),
+    warnConstructor = console.new(warnOptions),
+    errorConstructor = console.new(errorOptions),
 }
