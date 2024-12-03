@@ -1,6 +1,7 @@
 --!strict
-local safeWeakMap = require(script.Parent:WaitForChild('safeMap'))
+
 local primordials = require(script.Parent:WaitForChild('primordials'))
+local safeWeakMap = require(script.Parent:WaitForChild('safeMap'))
 
 type timesStore = {
     kBindStreamsEager: any,
@@ -8,8 +9,6 @@ type timesStore = {
     writable: any,
     value: safeWeakMap.SafeMap,
 }
-
-local kSkipLog = 0;
 
 local kSecond = 1000
 local kMinute = 60 * kSecond
@@ -19,7 +18,7 @@ local function pad(value)
     return primordials.stringPrototypePadStart(`{value}`, 2, '0')
 end
 
-local function formatTime(ms): string
+local function formatTime(ms)
     local hours = 0
     local minutes = 0
     local seconds = 0
@@ -27,7 +26,7 @@ local function formatTime(ms): string
     if ms >= kSecond then
         if ms >= kMinute then
             if ms >= kHour then
-                hours = math.floor(ms /kHour)
+                hours = math.floor(ms / kHour)
                 ms = ms % kHour
             end
             minutes = math.floor(ms / kMinute)
@@ -35,13 +34,13 @@ local function formatTime(ms): string
         end
         seconds = ms / kSecond
     end
-
+    
     if hours ~= 0 or minutes ~= 0 then
-        local splitString = string.split(tostring(primordials.numberPrototypeToFixed(seconds, 3)), '.')
-        seconds, ms = tonumber(splitString[1]) :: number, tonumber(splitString[2]) :: number
-
+        local splitSecondFix3 = string.split(tostring(primordials.numberPrototypeToFixed(seconds, 3)), '.')
+        seconds, ms = tonumber(splitSecondFix3[1]) :: number, tonumber(splitSecondFix3[2]) :: number
+        
         local res = if hours ~= 0 then `{hours}:{pad(minutes)}` else minutes
-        return `{res}:{pad(seconds)}.{ms} ({if hours ~= 0 then 'h:m' else ''}m:ss.mmm)`
+        return `{res}:{pad(seconds)}.{ms} ({if hours ~= 0 then 'h:m' else ''}m:ss.mmm`
     end
 
     if seconds ~= 0 then
@@ -54,16 +53,14 @@ end
 local function timeLogImpl(timesStore: timesStore, implementation, logImp: any, label, args)
     local getTime = timesStore.value:get(label)
     if getTime == nil then
-        print(`No such label "{label}" for {implementation}`)
+        print(`No such label '{label}" for {implementation}`)
         return
     end
-    
-    local duration = getTime
-    local ms = if duration == 0 then
-        0 
-    else 
-        tonumber(tostring(duration):sub(1, (10 // duration + 1)) .. '.' .. tostring(duration):sub((10 // duration + 1), (10 // duration + 1) + 4)) :: number
-    
+
+    local splitClockTime = string.split(tostring(os.clock()), '.')
+    local duration = { tonumber(splitClockTime[1]) - getTime[1], tonumber(splitClockTime[2]) - getTime[2] }
+    local ms = duration[1] * 1000 + duration[2] / 1e6
+
     local formatted = formatTime(ms)
 
     if args == nil then
@@ -73,89 +70,56 @@ local function timeLogImpl(timesStore: timesStore, implementation, logImp: any, 
     end
 end
 
-local timeImpl = {
-    kNone = 0,
-}
+local timeImpl = {}
 
-function timeImpl.time(
-    timesStore: timesStore, 
-    traceCategory, 
-    implementation, 
-    timerFlags, 
-    logLable, 
-    traceLabel
-)
-    if logLable == nil then
-        logLable = 'default'
+function timeImpl.time(timesStore: timesStore, traceCategory, implementation, timerFlags, logLabel, traceLabel)
+    if logLabel == nil then
+        logLabel = 'default'
     end
 
-    logLable = `{logLable}`
+    logLabel = `{logLabel}`
 
     if traceLabel ~= nil then
         traceLabel = `{traceLabel}`
     else
-        traceLabel = logLable
+        traceLabel = logLabel
     end
 
-    if timesStore.value:has(logLable) then
-        print(`Label "{logLable}" already exists for {implementation}`)
+    if timesStore.value:has(logLabel) then
+        print(`Label "{logLabel}" already exists for {implementation}`)
         return
     end
 
-    timesStore.value:set(logLable, os.clock())
+    local splitClockTime = string.split(tostring(os.clock()), '.')
+    timesStore.value:set(logLabel, { tonumber(splitClockTime[1]), tonumber(splitClockTime[2]) })
 end
 
-function timeImpl.timeEnd(
-    timesStore: timesStore,
-    traceCategory,
-    implementation,
-    timerFlags,
-    logImpl,
-    logLabel,
-    traceLabel
-)
+function timeImpl.timeEnd(timesStore: timesStore, traceCategory, implementation, timerFlags, logImpl, logLabel, traceLabel)
     if logLabel == nil then
         logLabel = 'default'
     end
 
     logLabel = `{logLabel}`
 
-    if traceLabel ~= nil then
-        traceLabel = `{traceLabel}`
-    else
-        traceLabel = logLabel
-    end
+    traceLabel = if traceLabel ~= nil then `{traceLabel}` else logLabel
 
-    if (timerFlags and kSkipLog) == 0 then
+    if timerFlags == 0 then
         timeLogImpl(timesStore, implementation, logImpl, logLabel)
     end
-    
+
     timesStore.value:delete(logLabel)
 end
 
-function timeImpl.timeLog(
-    timesStore: timesStore,
-    traceCategory,
-    implementation,
-    timerFlags,
-    logImpl,
-    logLabel,
-    traceLabel,
-    args
-)
+function timeImpl.timeLog(timesStore: timesStore, traceCategory, implementation, timerFlags, logImpl, logLabel, traceLabel, args)
     if logLabel == nil then
         logLabel = 'default'
     end
 
     logLabel = `{logLabel}`
 
-    if traceLabel ~= nil then
-        traceLabel = `{traceLabel}`
-    else
-        traceLabel = logLabel
-    end
+    traceLabel = if traceLabel ~= nil then `{traceLabel}` else logLabel
 
-    if (timerFlags and kSkipLog) == 0 then
+    if timerFlags == 0 then
         timeLogImpl(timesStore, implementation, logImpl, logLabel, args)
     end
 end

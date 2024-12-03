@@ -131,7 +131,7 @@ end
 
 local function stringPrototypePadStart(str: string, size: number, addStr: string)
     if #str >= size then
-        return str
+        return str:sub(1, size)
     end
 
     for i=1, size - #str do

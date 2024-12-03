@@ -208,9 +208,9 @@ end
 
 local function timeLogImpl(consoleRef, label, formatted, args)
     if args == nil then
-        consoleRef:log('%s:%s', label, formatted)
+        consoleRef:log(`{label}:{formatted}`)
     else
-        consoleRef:log('%s:%s', label, formatted, table.unpack(args))
+        consoleRef:log(`{label}:{formatted}`, table.unpack(args))
     end
 end
 
@@ -618,14 +618,14 @@ function console.time(self, label)
     if label == nil then 
         label = 'default'
     end
-    timeFunctions.time(self._times, kTraceConsoleCategory, 'console.time()', timeFunctions.kNone, label, `time::{label}`)
+    timeFunctions.time(self._times, kTraceConsoleCategory, 'console.time()', 0, label, `time::{label}`)
 end
 
 function console.timeEnd(self, label)
     if label == nil then
         label = 'default'
     end
-    timeFunctions.timeEnd(self._times, kTraceConsoleCategory, 'console.timeEnd()', timeFunctions.kNone, function(label, formatted, args)
+    timeFunctions.timeEnd(self._times, kTraceConsoleCategory, 'console.timeEnd()', 0, function(label, formatted, args)
         timeLogImpl(self, label, formatted, args)
     end, label, `time::{label}`)
 end
@@ -634,7 +634,7 @@ function console.timeLog(self, label, ...)
     if label == nil then
         label = 'default'
     end
-    timeFunctions.timeLog(self._times, kTraceConsoleCategory, 'console.timeLog()', timeFunctions.kNone, function(label, formatted, args)
+    timeFunctions.timeLog(self._times, kTraceConsoleCategory, 'console.timeLog()', 0, function(label, formatted, args)
        timeLogImpl(self, label, formatted, args) 
     end, label, `time::{label}`, { ... })
 end
