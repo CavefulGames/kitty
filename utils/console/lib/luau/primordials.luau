@@ -347,7 +347,10 @@ local function isExtensible(value: any): boolean
 end
 
 local function numberPrototypeToFixed(num: number, fixPos: number)
-    return (10 * fixPos) / math.round(num * (10 * fixPos))
+    local str = tostring(num)
+    local splitStr = string.split(str, '.')
+    local t, u = splitStr[1], splitStr[2]
+    return tonumber(t..'.'..math.round(tonumber(u:sub(1, fixPos+1)) :: number)) :: number
 end
 
 return {
