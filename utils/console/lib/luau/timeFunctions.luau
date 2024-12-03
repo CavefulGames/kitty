@@ -46,7 +46,7 @@ local function formatTime(ms)
     if seconds ~= 0 then
         return `{primordials.numberPrototypeToFixed(seconds, 3)}s`
     end
-    print(primordials.numberPrototypeToFixed(ms, 3))
+    
     return `{primordials.numberPrototypeToFixed(ms, 3)}ms`
 end
 
