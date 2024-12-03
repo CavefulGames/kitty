@@ -4,6 +4,7 @@ local safeWeakMap = require(script.Parent:WaitForChild('safeMap'))
 local colors = require(script.Parent:WaitForChild('colors'))
 local primordials = require(script.Parent:WaitForChild('primordials'))
 local inspect = require(script.Parent:WaitForChild('inspect'))
+local timeFunctions = require(script.Parent:WaitForChild('timeFunctions'))
 
 local errorCodes = errorMain.codes
 local isStackOverflowError = errorMain.isStackOverflowError
@@ -142,6 +143,8 @@ local kWriteToConsole = 'kWriteToConsole'
 local SymbolToStringTag = 'SymbolToStringTag'
 local kFormatForStdout = 'kFormatForStdout'
 
+local kTraceConsoleCategory = 'node,node.console';
+
 local kMaxGroupIndentation = 1000
 
 local optionsMap = safeWeakMap.new()
@@ -200,6 +203,14 @@ local function createWriteErrorHandler(instance, streamSymbol)
                 (stream.value :: any ).once('error', noop)
             end
         end
+    end
+end
+
+local function timeLogImpl(consoleRef, label, formatted, args)
+    if args == nil then
+        consoleRef:log('%s:%s', label, formatted)
+    else
+        consoleRef:log('%s:%s', label, formatted, table.unpack(args))
     end
 end
 
@@ -601,6 +612,31 @@ function console.dir(self, object, options)
         
         return result
     end)()))
+end
+
+function console.time(self, label)
+    if label == nil then 
+        label = 'default'
+    end
+    timeFunctions.time(self._times, kTraceConsoleCategory, 'console.time()', timeFunctions.kNone, label, `time::{label}`)
+end
+
+function console.timeEnd(self, label)
+    if label == nil then
+        label = 'default'
+    end
+    timeFunctions.timeEnd(self._times, kTraceConsoleCategory, 'console.timeEnd()', timeFunctions.kNone, function(label, formatted, args)
+        timeLogImpl(self, label, formatted, args)
+    end, label, `time::{label}`)
+end
+
+function console.timeLog(self, label, ...)
+    if label == nil then
+        label = 'default'
+    end
+    timeFunctions.timeLog(self._times, kTraceConsoleCategory, 'console.timeLog()', timeFunctions.kNone, function(label, formatted, args)
+       timeLogImpl(self, label, formatted, args) 
+    end, label, `time::{label}`, { ... })
 end
 
 function console.trace(self, ...)

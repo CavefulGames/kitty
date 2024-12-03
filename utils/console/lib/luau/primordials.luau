@@ -108,25 +108,37 @@ local function arrayPrototypeJoin(array: { [number]: string }, str: string?)
 end
 
 local function stringPrototypeSlice(str: string, start: number?, end_: number?): string
-    local start = (start or 0) :: number
+    start = (start or 0)
     if start < 0 then
-        start = math.max(#str + start, 0)
+        start = math.max(#str + start :: number, 0)
     else
-        start = math.min(start, #str)
+        start = math.min(start :: number, #str)
     end
     
-    local end_ = (end_ or #str) :: number
+    end_ = (end_ or #str)
     if end_ < 0 then
-        end_ = math.max(#str + end_, 0)
+        end_ = math.max(#str + end_ :: number, 0)
     else
-        end_ = math.min(end_, #str)
+        end_ = math.min(end_ :: number, #str)
     end
     
     if start >= end_ then
         return ""
     end
     
-    return string.sub(str, start + 1, end_)
+    return string.sub(str, start :: number + 1, end_)
+end
+
+local function stringPrototypePadStart(str: string, size: number, addStr: string)
+    if #str >= size then
+        return str
+    end
+
+    for i=1, size - #str do
+        str = addStr .. str
+    end
+
+    return str
 end
 
 local function isArray(arr)
@@ -210,7 +222,7 @@ end
 
 local function formatWithOptions(options, value, recurseTimes)
     options = options or {}
-    recurseTimes = recurseTimes or 0
+    recurseTimes = tonumber(recurseTimes) or 0
     
     options.depth = options.depth or 2
     options.colors = options.colors or false
@@ -334,6 +346,9 @@ local function isExtensible(value: any): boolean
     return true
 end
 
+local function numberPrototypeToFixed(num: number, fixPos: number)
+    return (10 * fixPos) / math.round(num * (10 * fixPos))
+end
 
 return {
     arrayPrototypeUnshift=arrayPrototypeUnshift,
@@ -344,6 +359,8 @@ return {
     formatWithOptions=formatWithOptions,
     stringPrototypeRepeat=stringPrototypeRepeat,
     stringPrototypeSlice=stringPrototypeSlice,
+    stringPrototypePadStart=stringPrototypePadStart,
+    numberPrototypeToFixed=numberPrototypeToFixed,
     mathMaxApply=mathMaxApply,
     mathMax=mathMax,
     escapeString=escapeString,
