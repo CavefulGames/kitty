@@ -79,31 +79,7 @@ end
 local gear = {} :: Gear
 
 function gear.defineField(data, dataType)
-    dataType = (dataType or if data then
-            if typeof(data :: any) == 'string' then
-                if string.len(dataType :: any) == 1 then
-                    'char'
-                else
-                    'string'
-            elseif typeof(data :: any) == 'boolean' then
-                'boolean'
-            elseif typeof(data :: any) == 'table' then
-                'array'
-            elseif typeof(data :: any) == 'number' then
-                if math.round(data :: any) == data :: any then
-                    if math.abs(data :: any) == data :: any then
-                        'u32'
-                    else
-                        'i32'
-                else
-                    'f64'
-            else
-                'unknown'
-        else
-            error "argument' s is nil") 
-    :: dataTypes
-    
-    
+
 end
 
 function gear.defineConfiguration(name, fields)
@@ -152,6 +128,7 @@ function gear.startServer()
     end
 end
 
--- gear.defineConfiguration('w', { apple='' }):load((0 :: any) :: Player)
+-- local t = gear.defineField('char', 'char')
+-- gear.defineConfiguration('test', { a = t }).load().config.a
 
 return gear

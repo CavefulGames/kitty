@@ -1,5 +1,4 @@
 --!strict
-
 type Object = {
     [any]: any
 }
