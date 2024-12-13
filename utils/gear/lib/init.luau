@@ -79,12 +79,15 @@ end
 local gear = {} :: Gear
 
 function gear.defineField(data, dataType)
-
+    if dataType == nil then
+        
+    end
+    return dataType :: any & { __brand: "gearField" }
 end
 
 function gear.defineConfiguration(name, fields)
     return { 
-        load = function(player)
+        load = function(player: Player?)
             if not player then
                 player = game:GetService('Players').LocalPlayer
             end
@@ -128,7 +131,8 @@ function gear.startServer()
     end
 end
 
--- local t = gear.defineField('char', 'char')
+local t = gear.defineField('char', 'char')
+
 -- gear.defineConfiguration('test', { a = t }).load().config.a
 
 return gear
