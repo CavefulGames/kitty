@@ -1,5 +1,8 @@
-/Packages
-playground
+.playground
 sourcemap.json
-**/*.lock
-launcher/target
+link/target
+
+roblox_packages
+lune_packages
+luau_packages
+.pesde
