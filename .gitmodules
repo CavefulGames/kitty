@@ -1,6 +1,9 @@
 [submodule "submodules/argparse"]
-	path = submodules/argparse
+	path = cli/submodules/argparse
 	url = https://github.com/jiwonz/argparse-lune.git
 [submodule "submodules/tomlstruct"]
-	path = submodules/tomlstruct
+	path = cli/submodules/tomlstruct
 	url = https://github.com/jiwonz/TomlStruct.lune.git
+[submodule "submodules/pathfs"]
+	path = cli/submodules/pathfs
+	url = https://github.com/jiwonz/lune-path-fs.git
