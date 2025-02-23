@@ -12,13 +12,13 @@
 			"StarterPlayerScripts": {
 				"$className": "StarterPlayerScripts",
 				"Client": {
-					"$path": "dev/client.init.luau"
+					"$path": "dev/test.client.luau"
 				}
 			}
 		},
 		"ServerScriptService": {
 			"Server": {
-				"$path": "dev/server.init.luau"
+				"$path": "dev/test.server.luau"
 			}
 		}
 	}
