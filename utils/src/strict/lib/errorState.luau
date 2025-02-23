@@ -1,3 +1,0 @@
-return {
-	level = 2
-}
