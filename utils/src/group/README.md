@@ -1,8 +1,10 @@
-# Group
-유연한 로블록스 클래스 그루핑 유틸
+# English
 
-## 사용 예시
-```lua
+## Group
+Flexible Roblox class grouping utility
+
+# Example Usage
+```luau
 -- Magic groups: Sound, Collision
 -- usage: Group.new(className)
 local soundGroup = Group.new("Sound") -- It's a magic group! uses SoundGroup instance internally
@@ -27,8 +29,20 @@ collisionGroup:insert(part) -- Its part.CollisionGroup will be applied like "0x0
 collisionGroup:identify("MyCollisionGroup") -- This will update inserted elements' CollisionGroup to "MyCollisionGroup" from "0x000001b0b6867e78"
 collisionGroup:setCollidable()
 
-local instanceGroup = Group.new("Part", "identifier") -- Identify with new function
--- temp idea: local instanceGroup = Group.Instance.new("Part", "identifier")
+local instanceGroup = Group.new("Part", "identifier") :: Group.Group<Part> -- Identify with new function
+-- temp idea: local instanceGroup = Group.Instance.new("Part", "ididentifierentifier")
 instanceGroup:insert(part)
-instanceGroup.CanCollide = false
+instanceGroup.CanCollide = false -- this is set CanCollide of all elements in this group
+
+local myCollisionGroup = Group.new("Collision", "this is required!")
+local groups = Group.namespace(function(new)
+	return {
+		myCollisionGroup = new("Collision")
+	}
+end)
+
+groups.myCollisionGroup.insertEvent:connect(function(part)
+	print(part, "inserted!")
+end)
+groups.myCollisionGroup:insert(part)
 ```
