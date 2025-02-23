@@ -1,5 +1,7 @@
-# Strict
-[런타임에서 엄격한 유형검사](https://github.com/osyrisrblx/t)를 위한 간단한 라이브러리
+# English
+
+## Strict
+A simple library for strict type checking at runtime.
 
 ## 사용 예시
 ```lua
