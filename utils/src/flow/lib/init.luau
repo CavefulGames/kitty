@@ -1,6 +1,5 @@
-local strict = require(script.Parent.roblox_packages.strict)
-local threadpool = require(script.Parent.roblox_packages.threadpool)
-local limesignal = require(script.Parent.roblox_packages.limesignal)
+local go = require(script.Parent.roblox_packages.go)
+local Signal = require(script.Parent.roblox_packages.signal)
 local Batch = require(script.Batch)
 local Timer = require(script.Timer)
 local noYield = require(script.noYield)
@@ -15,12 +14,11 @@ flow.getLuaTime = os.clock
 flow.getUTCTime = os.time
 flow.getSharedTime = workspace.GetServerTimeNow
 flow.getRobloxTime = elapsedTime
-flow.spawn = threadpool
+flow.spawn = go
 flow.noYield = noYield
 
-flow.Signal = limesignal.Signal
-flow.Bindable = limesignal.Bindable
+flow.Signal = Signal
 flow.Batch = Batch
 flow.Timer = Timer
 
-return strict.table(flow, "flow")
+return table.freeze(flow)

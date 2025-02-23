@@ -19,8 +19,8 @@ sourcemap_generator = ".pesde/scripts/sourcemap_generator.luau"
 default = "https://github.com/daimond113/pesde-index"
 
 [dependencies]
-threadpool = { name = "caveful_games/threadpool", version = "^0.1.9" }
-limesignal = { name = "caveful_games/limesignal", version = "^0.2.0" }
+signal = { name = "jiwonz/signal", version = "^0.1.0" }
+go = { name = "jiwonz/go", version = "^0.2.0" }
 
 [dev_dependencies]
 scripts = { name = "pesde/scripts_rojo", version = "^0.1.0", target = "lune" }

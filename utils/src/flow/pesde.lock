@@ -15,29 +15,12 @@ frktest = [{ name = "itsfrank/frktest", version = "^0.0.2", index = "https://git
 luau-lsp = [{ name = "pesde/luau_lsp", version = "=1.39.2", index = "https://github.com/pesde-pkg/index", target = "lune" }, "dev"]
 stylua = [{ name = "pesde/stylua", version = "=2.0.2", index = "https://github.com/pesde-pkg/index", target = "lune" }, "dev"]
 
-[graph."caveful_games/limesignal@0.2.0 roblox"]
-direct = ["limesignal", { name = "caveful_games/limesignal", version = "^0.2.0", index = "default" }, "standard"]
+[graph."caveful_games/table_helper@0.2.0-rc.1 roblox"]
 resolved_ty = "standard"
 
-[graph."caveful_games/limesignal@0.2.0 roblox".dependencies]
-"caveful_games/threadpool@0.1.9 roblox" = "threadpool"
-
-[graph."caveful_games/limesignal@0.2.0 roblox".pkg_ref]
+[graph."caveful_games/table_helper@0.2.0-rc.1 roblox".pkg_ref]
 ref_ty = "pesde"
-index_url = "https://github.com/daimond113/pesde-index"
-
-[graph."caveful_games/limesignal@0.2.0 roblox".pkg_ref.dependencies]
-rojo = [{ name = "pesde/rojo", version = "^7.4.4", index = "https://github.com/daimond113/pesde-index", target = "lune" }, "dev"]
-scripts = [{ name = "pesde/scripts_rojo", version = "^0.1.0", index = "https://github.com/daimond113/pesde-index", target = "lune" }, "dev"]
-threadpool = [{ name = "caveful_games/threadpool", version = "^0.1.9", index = "https://github.com/daimond113/pesde-index" }, "standard"]
-
-[graph."caveful_games/threadpool@0.1.9 roblox"]
-direct = ["threadpool", { name = "caveful_games/threadpool", version = "^0.1.9", index = "default" }, "standard"]
-resolved_ty = "standard"
-
-[graph."caveful_games/threadpool@0.1.9 roblox".pkg_ref]
-ref_ty = "pesde"
-index_url = "https://github.com/daimond113/pesde-index"
+index_url = "https://github.com/pesde-pkg/index"
 
 [graph."corecii/greentea@0.4.11 lune"]
 resolved_ty = "standard"
@@ -63,6 +46,20 @@ luau_lsp = [{ name = "pesde/luau_lsp", version = "^1.38.1", index = "https://git
 pathfs = [{ name = "jiwonz/pathfs", version = "^0.3.0", index = "https://github.com/daimond113/pesde-index" }, "standard"]
 selene = [{ name = "pesde/selene", version = "^0.28.0", index = "https://github.com/daimond113/pesde-index" }, "dev"]
 stylua = [{ name = "pesde/stylua", version = "^2.0.2", index = "https://github.com/daimond113/pesde-index" }, "dev"]
+
+[graph."jiwonz/go@0.2.0 roblox"]
+direct = ["go", { name = "jiwonz/go", version = "^0.2.0", index = "default" }, "standard"]
+resolved_ty = "standard"
+
+[graph."jiwonz/go@0.2.0 roblox".dependencies]
+"jiwonz/task@0.2.0-rc.2 roblox" = "task"
+
+[graph."jiwonz/go@0.2.0 roblox".pkg_ref]
+ref_ty = "pesde"
+index_url = "https://github.com/daimond113/pesde-index"
+
+[graph."jiwonz/go@0.2.0 roblox".pkg_ref.dependencies]
+task = [{ name = "jiwonz/task", version = "^0.2.0-rc.1", index = "https://github.com/pesde-pkg/index" }, "standard"]
 
 [graph."jiwonz/luau_disk@0.1.4 luau"]
 resolved_ty = "standard"
@@ -100,6 +97,31 @@ frktest = [{ name = "itsfrank/frktest", version = "^0.0.2", index = "https://git
 greentea = [{ name = "corecii/greentea", version = "^0.4.11", index = "https://github.com/daimond113/pesde-index" }, "standard"]
 luau_check = [{ name = "jiwonz/luau_check", version = "^0.3.8", index = "https://github.com/daimond113/pesde-index" }, "dev"]
 luau_path = [{ name = "jiwonz/luau_path", version = "^0.1.1", index = "https://github.com/daimond113/pesde-index", target = "luau" }, "standard"]
+
+[graph."jiwonz/signal@0.1.0 roblox"]
+direct = ["signal", { name = "jiwonz/signal", version = "^0.1.0", index = "default" }, "standard"]
+resolved_ty = "standard"
+
+[graph."jiwonz/signal@0.1.0 roblox".dependencies]
+"caveful_games/table_helper@0.2.0-rc.1 roblox" = "table_helper"
+"jiwonz/go@0.2.0 roblox" = "go"
+"jiwonz/task@0.2.0-rc.2 roblox" = "task"
+
+[graph."jiwonz/signal@0.1.0 roblox".pkg_ref]
+ref_ty = "pesde"
+index_url = "https://github.com/daimond113/pesde-index"
+
+[graph."jiwonz/signal@0.1.0 roblox".pkg_ref.dependencies]
+go = [{ name = "jiwonz/go", version = "^0.2.0", index = "https://github.com/pesde-pkg/index" }, "standard"]
+table_helper = [{ name = "caveful_games/table_helper", version = "^0.2.0-rc.1", index = "https://github.com/pesde-pkg/index" }, "standard"]
+task = [{ name = "jiwonz/task", version = "^0.2.0-rc.1", index = "https://github.com/pesde-pkg/index" }, "standard"]
+
+[graph."jiwonz/task@0.2.0-rc.2 roblox"]
+resolved_ty = "standard"
+
+[graph."jiwonz/task@0.2.0-rc.2 roblox".pkg_ref]
+ref_ty = "pesde"
+index_url = "https://github.com/pesde-pkg/index"
 
 [graph."lukadev_0/option@1.2.0 lune"]
 resolved_ty = "standard"
