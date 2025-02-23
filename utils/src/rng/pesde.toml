@@ -1,0 +1,29 @@
+name = "kitty/rng"
+version = "0.1.0"
+description = "Random related utilities"
+authors = ["jiwonz <me@jiwonz.kr>"]
+repository = "https://github.com/CavefulGames/kitty"
+license = "MIT"
+includes = ["lib", "README.md"]
+
+[target]
+environment = "roblox"
+lib = "lib/init.luau"
+build_files = ["lib"]
+
+[scripts]
+roblox_sync_config_generator = ".pesde/scripts/roblox_sync_config_generator.luau"
+sourcemap_generator = ".pesde/scripts/sourcemap_generator.luau"
+
+[indices]
+default = "https://github.com/daimond113/pesde-index"
+
+[wally_indices]
+default = "https://github.com/UpliftGames/wally-index"
+
+[dev_dependencies]
+scripts = { name = "pesde/scripts_rojo", version = "^0.1.0", target = "lune" }
+rojo = { name = "pesde/rojo", version = "^7.4.4", target = "lune" }
+
+[dependencies]
+xxhash32 = { wally = "wally#dekkonot/xxhash32", version = "^1.0.1" }
