@@ -1,4 +1,5 @@
 --!strict
+-- will be removed soon (no strong usage)
 
 local net = require("@lune/net")
 local pathfs = require("pathfs")

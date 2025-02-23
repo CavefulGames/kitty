@@ -1,4 +1,5 @@
 --!strict
+-- will be replaced by dirs-lune!
 -- special thanks to [dirs-rs](https://github.com/dirs-dev/dirs-rs/blob/main/src/lib.rs) for informations
 
 local process = require("@lune/process")
